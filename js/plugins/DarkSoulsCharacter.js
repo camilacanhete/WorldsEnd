@@ -40,48 +40,6 @@ var dsc_animation_speed = Number(PluginManager.parameters('DarkSoulsCharacter')[
 var dsc_move_speed = Number(PluginManager.parameters('DarkSoulsCharacter')["MOVE_SPEED"]);
 var dsc_sprite_directions = String(PluginManager.parameters('DarkSoulsCharacter')["DIRECTIONS"]).split(",");
 var dsc_direction = 0;
-
-// @override - csantos: adding a new window on map called _healthBar to show player's hp and stamina
-var dsc_Scene_Map_start = Scene_Map.prototype.start;
-Scene_Map.prototype.start = function() {
-    dsc_Scene_Map_start.call(this);
-    this._healthBar = new HealthBar(100, 100);
-    this.addWindow(this._healthBar);
-};
-
-// @override - csantos: updating the window called _healthBar with other map updates
-var dsc_Scene_Map_update = Scene_Map.prototype.update;
-Scene_Map.prototype.update = function() {
-    dsc_Scene_Map_update.call(this);
-    this._healthBar.refresh();
-};
-
-//csantos: creating a class for the health bar window
-function HealthBar() {
-    this.initialize.apply(this, arguments);
-}
-
-HealthBar.prototype = Object.create(Window_Base.prototype);
-HealthBar.prototype.constructor = HealthBar;
-
-HealthBar.prototype.initialize = function(x, y) {
-    Window_Base.prototype.initialize.call(this, 0, 0, this.windowWidth(), this.windowHeight());
-    this._value = -1;
-    this.refresh();
-};
-
-HealthBar.prototype.refresh = function(){
-    this.contents.clear();
-    this.drawActorHp($gameParty.leader(), 0, 0, 200);
-};
-
-HealthBar.prototype.windowWidth = function() {
-    return 240;
-};
-    
-HealthBar.prototype.windowHeight = function() {
-    return 80;
-};
   
 // @override - csantos: adding a new variable called _diagonal on Game_CharacterBase class
 // and giving more freedom to player adjust move speed
