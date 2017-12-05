@@ -90,7 +90,7 @@ PlayerGUI.prototype.initialize = function(x, y) {
 PlayerGUI.prototype.refresh = function(){
     this.contents.clear();
     this._guiHPBackground.setFrame(0, 0, (dsc_foreground_hp_image_width * $gameParty.leader().hp/$gameParty.leader().mhp), dsc_foreground_hp_image_height);
-    //this._guiStaminaBackground.setFrame(0, 0, (dsc_foreground_hp_image_width * $gameParty.leader().hp/$gameParty.leader().mhp), dsc_foreground_hp_image_height);
+    this._guiStaminaBackground.setFrame(0, 0, (dsc_foreground_stamina_image_width * $gamePlayer.stamina/100), dsc_foreground_stamina_image_height);
 };
 
 PlayerGUI.prototype.windowWidth = function() {
@@ -147,6 +147,7 @@ PlayerGUI.prototype.createStaminaBackground = function() {
     this._guiStaminaBackground.anchor.y = 0;
     this._guiStaminaBackground.x = 0;
     this._guiStaminaBackground.y = dsc_foreground_hp_image_height + 10;
+    console.log($gameParty.leader());
 };
     
 PlayerGUI.prototype.setStaminaBackground = function() {
