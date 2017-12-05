@@ -2284,8 +2284,8 @@ function ColliderManager() {
   Game_CharacterBase.prototype.regionId = function() {
     return $gameMap.regionId(this.x, this.y);
   };
-
-  var Alias_Game_CharacterBase_update = Game_CharacterBase.prototype.update;
+    
+  //var Alias_Game_CharacterBase_update = Game_CharacterBase.prototype.update;
   Game_CharacterBase.prototype.update = function() {
     var prevX = this._realPX;
     var prevY = this._realPY;
@@ -2294,6 +2294,7 @@ function ColliderManager() {
     } else {
       this.updateStop();
     }
+      
     if (this.isArcing()) {
       this.updateArc();
     } else if (this.isJumping()) {
@@ -2301,6 +2302,7 @@ function ColliderManager() {
     } else if (this.isMoving()) {
       this.updateMove();
     }
+      
     this.updateAnimation();
     this.updateColliders();
     if (prevX !== this._realPX || prevY !== this._realPY) {
@@ -2308,6 +2310,8 @@ function ColliderManager() {
     } else {
       this._isMoving = false;
     }
+    
+    //Alias_Game_CharacterBase_update.call(this);
   };
 
   Game_CharacterBase.prototype.updateMove = function() {
@@ -3230,6 +3234,7 @@ function ColliderManager() {
     }
   };
 
+  var Alias_Game_Player_updateDashing = Game_Player.prototype.updateDashing;
   Game_Player.prototype.updateDashing = function() {
     if (this.startedMoving()) return;
     if (this.canMove() && !this.isInVehicle() && !$gameMap.isDashDisabled()) {
@@ -3237,6 +3242,8 @@ function ColliderManager() {
     } else {
       this._dashing = false;
     }
+      
+    Alias_Game_Player_updateDashing.call(this);
   };
 
   Game_Player.prototype.startMapEvent = function(x, y, triggers, normal) {

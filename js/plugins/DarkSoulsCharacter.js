@@ -40,135 +40,22 @@ var dsc_animation_speed = Number(PluginManager.parameters('DarkSoulsCharacter')[
 var dsc_move_speed = Number(PluginManager.parameters('DarkSoulsCharacter')["MOVE_SPEED"]);
 var dsc_sprite_directions = String(PluginManager.parameters('DarkSoulsCharacter')["DIRECTIONS"]).split(",");
 var dsc_direction = 0;
+
+//------------------------------------------------------------------------------------------------------------------------------------
+// CHARACTER MOVEMENT
+//------------------------------------------------------------------------------------------------------------------------------------
   
 // @override - csantos: adding a new variable called _diagonal on Game_CharacterBase class
 // and giving more freedom to player adjust move speed
 var dsc_Game_CharacterBase_initMembers = Game_CharacterBase.prototype.initMembers;
 Game_CharacterBase.prototype.initMembers = function() {
     dsc_Game_CharacterBase_initMembers.call(this);
+    this._stamina  = 100;
     this._diagonal = 0;
     this._moveSpeed = dsc_move_speed;
+    this._characterWasMoving = false;
     this._tileQuadrant = { x: 0, y: 0 };
 };    
-    
-// @override - csantos: setting a custom spritesheet bitmap
-var dsc_Sprite_Character_setCharacterBitmap = Sprite_Character.prototype.setCharacterBitmap;
-Sprite_Character.prototype.setCharacterBitmap = function() {
-	
-    this._cframes = dsc_sprite_width;
-    this._character._spattern = 0;
-    this._character._patSpd = this._cframes * dsc_animation_speed;
-	this._character._cframes = this._cframes;
-	dsc_Sprite_Character_setCharacterBitmap.call(this);
-};
-
-
-// @override - csantos: this function controls the column frames (y axis) from 0 to this._cframes
-Game_CharacterBase.prototype.pattern = function() {
-    return this._pattern < this._cframes ? this._pattern : this._spattern;
-};
-
-//@override - csantos: this function resets _pattern 
-Game_CharacterBase.prototype.updatePattern = function() {
-    if (!this.hasStepAnime() && this._stopCount > 0) {
-        this.resetPattern();
-    } else {
-		this._pattern = (this._pattern + 1) % (this._cframes + this._spattern);
-    }
-};
-
-//@override - csantos: this function controls animation speed
-var dsc_CharacterBase_animationWait = Game_CharacterBase.prototype.animationWait;
-Game_CharacterBase.prototype.animationWait = function() {
-    return dsc_CharacterBase_animationWait.call(this) - this._patSpd;
-};
-
-
-//@override - csantos: this function controls which sprite block character is, since the spritesheet can have up to 8 different characters (default is 0)
-var dsc_Sprite_Character_characterBlockX = Sprite_Character.prototype.characterBlockX;
-Sprite_Character.prototype.characterBlockX = function() {
-    if (this._isBigCharacter) {
-        return 0;
-    } else {
-        var index = this._character.characterIndex();
-        return index % 4 * this._cframes;
-    }
-};
-
-//@override - csantos: this function controls the sprite width
-Sprite_Character.prototype.patternWidth = function() {
-    return this.bitmap.width / this._cframes;
-};
-   
-//@override - csantos: this function controls the sprite height
-Sprite_Character.prototype.patternHeight = function() {
-    return this.bitmap.height / dsc_sprite_height;
-};
-    
-//@override - csantos: this function controls which row of the sprite pattern should be displayed
-var dsc_Sprite_Character_characterPatternY = Sprite_Character.prototype.characterPatternY;
-Sprite_Character.prototype.characterPatternY = function() {
-    
-    if(this._character.isDiagonal()) return this._character.getDiagonalDirection();
-    
-    return dsc_Sprite_Character_characterPatternY.call(this);
-};
-
-//csantos: creating a new function to convert the input direction to the correspondent animation present on the current sprite configuration 
-Sprite_Character.prototype.getAnimationIndex = function(animationIndex) {
-    
-    var animationName = "";
-    
-    switch(animationIndex) {
-        case 0:
-            animationName = "BOTTOM";
-        break;
-        case 1:
-            animationName = "LEFT";
-        break;
-        case 2:
-            animationName = "RIGHT";
-        break;
-        case 3:
-            animationName = "TOP";
-        break;
-        case 4:
-            animationName = "BOTTOMRIGHT";
-        break;
-        case 5:
-            animationName = "BOTTOMLEFT";
-        break;
-        case 6:
-            animationName = "TOPRIGHT";
-        break;
-        case 7:
-            animationName = "TOPLEFT";
-        break;
-    }
-    
-    return dsc_sprite_directions.indexOf(animationName);
-};    
-
-//@override - csantos: this function updates character frame
-//The important part is characterPatternY, it controls which row of animation we are displaying at the moment
-//We'll override the animation standard sequence to have more freedom
-Sprite_Character.prototype.updateCharacterFrame = function() {
-    var pw = this.patternWidth();
-    var ph = this.patternHeight();
-    var sx = (this.characterBlockX() + this.characterPatternX()) * pw;
-    var i = this.getAnimationIndex(this.characterPatternY());
-    var sy = (this.characterBlockY() + i) * ph;
-
-    this.updateHalfBodySprites();
-    if (this._bushDepth > 0) {
-        var d = this._bushDepth;
-        this._upperBody.setFrame(sx, sy, pw, ph - d);
-        this._lowerBody.setFrame(sx, sy + ph - d, pw, d);
-        this.setFrame(sx, sy, 0, ph);
-    } else {
-        this.setFrame(sx, sy, pw, ph);
-    }
-};
 
 //@override - csantos: enabling diagonal movement - from default 4 directions to 8 directions
 Game_Player.prototype.getInputDirection = function() {
@@ -503,4 +390,173 @@ Game_Player.prototype.executeMove = function(direction) {
     };
 };
     
+//------------------------------------------------------------------------------------------------------------------------------------
+// CHARACTER ANIMATION
+//------------------------------------------------------------------------------------------------------------------------------------
+
+// @override - csantos: setting a custom spritesheet bitmap
+var dsc_Sprite_Character_setCharacterBitmap = Sprite_Character.prototype.setCharacterBitmap;
+Sprite_Character.prototype.setCharacterBitmap = function() {
+	
+    this._character._cframes = !this._character._cframes ? dsc_sprite_width : this._character._cframes;
+    this._character._spattern = 0;
+    this._character._patSpd = this._character._cframes * dsc_animation_speed;
+    //this._cframes = this._character._cframes;
+    
+	dsc_Sprite_Character_setCharacterBitmap.call(this);
+};
+
+//@override - csantos: this function controls which sprite block character is, since the spritesheet can have up to 8 different characters (default is 0)
+var dsc_Sprite_Character_characterBlockX = Sprite_Character.prototype.characterBlockX;
+Sprite_Character.prototype.characterBlockX = function() {
+    if (this._isBigCharacter) {
+        return 0;
+    } else {
+        var index = this._character.characterIndex();
+        return index % 4 * this._character._cframes;
+    }
+};
+
+//@override - csantos: this function controls the sprite width
+Sprite_Character.prototype.patternWidth = function() {
+    return this.bitmap.width / this._character._cframes;
+};
+   
+//@override - csantos: this function controls the sprite height
+Sprite_Character.prototype.patternHeight = function() {
+    return this.bitmap.height / dsc_sprite_height;
+};
+    
+//@override - csantos: this function controls which row of the sprite pattern should be displayed
+var dsc_Sprite_Character_characterPatternY = Sprite_Character.prototype.characterPatternY;
+Sprite_Character.prototype.characterPatternY = function() {
+    
+    if(this._character.isDiagonal()) return this._character.getDiagonalDirection();
+    
+    return dsc_Sprite_Character_characterPatternY.call(this);
+};
+
+//csantos: creating a new function to convert the input direction to the correspondent animation present on the current sprite configuration 
+Sprite_Character.prototype.getAnimationIndex = function(animationIndex) {
+    
+    var animationName = "";
+    
+    switch(animationIndex) {
+        case 0:
+            animationName = "BOTTOM";
+        break;
+        case 1:
+            animationName = "LEFT";
+        break;
+        case 2:
+            animationName = "RIGHT";
+        break;
+        case 3:
+            animationName = "TOP";
+        break;
+        case 4:
+            animationName = "BOTTOMRIGHT";
+        break;
+        case 5:
+            animationName = "BOTTOMLEFT";
+        break;
+        case 6:
+            animationName = "TOPRIGHT";
+        break;
+        case 7:
+            animationName = "TOPLEFT";
+        break;
+    }
+    
+    return dsc_sprite_directions.indexOf(animationName);
+};    
+
+//@override - csantos: this function updates character frame
+//The important part is characterPatternY, it controls which row of animation we are displaying at the moment
+//We'll override the animation standard sequence to have more freedom
+Sprite_Character.prototype.updateCharacterFrame = function() {
+    var pw = this.patternWidth();
+    var ph = this.patternHeight();
+    var sx = (this.characterBlockX() + this.characterPatternX()) * pw;
+    var i = this.getAnimationIndex(this.characterPatternY());
+    var sy = (this.characterBlockY() + i) * ph;
+
+    this.updateHalfBodySprites();
+    if (this._bushDepth > 0) {
+        var d = this._bushDepth;
+        this._upperBody.setFrame(sx, sy, pw, ph - d);
+        this._lowerBody.setFrame(sx, sy + ph - d, pw, d);
+        this.setFrame(sx, sy, 0, ph);
+    } else {
+        this.setFrame(sx, sy, pw, ph);
+    }
+};
+    
+// @override - csantos: this function controls the column frames (y axis) from 0 to this._cframes
+Game_CharacterBase.prototype.pattern = function() {
+    return this._pattern < this._cframes ? this._pattern : this._spattern;
+};
+
+//@override - csantos: this function resets _pattern 
+Game_CharacterBase.prototype.updatePattern = function() {
+    if (!this.hasStepAnime() && this._stopCount > 0) {
+        this.resetPattern();
+    } else {
+		this._pattern = (this._pattern + 1) % (this._cframes + this._spattern);
+    }
+};
+
+//@override - csantos: this function controls animation speed
+var dsc_CharacterBase_animationWait = Game_CharacterBase.prototype.animationWait;
+Game_CharacterBase.prototype.animationWait = function() {
+    return dsc_CharacterBase_animationWait.call(this) - this._patSpd;
+};
+
+//@override - csantos: this function controls player spritesheet animation
+var dsc_Game_Player_updateAnimation = Game_Player.prototype.updateAnimation;
+Game_Player.prototype.updateAnimation = function() {
+    
+    if(this._isMoving && !this._characterWasMoving) {
+        this._cframes = 6;
+        this.actor()._characterName = "Walk";
+        this.refresh();
+        
+    } else if(!this._isMoving && this._characterWasMoving) {
+        this._cframes = 1;
+        this.actor()._characterName = "Stand";
+        this.refresh();
+        ////this.actor().setCharacterImage("Stand", 0);
+    }
+    
+    this._characterWasMoving = this._isMoving;
+
+    dsc_Game_Player_updateAnimation.call(this);
+};    
+    
+//------------------------------------------------------------------------------------------------------------------------------------
+// STAMINA
+//------------------------------------------------------------------------------------------------------------------------------------
+ 
+//csantos: define a new property on Game_CharacterBase so we can use $gamePlayer.stamina to get stamina value
+Object.defineProperties(Game_CharacterBase.prototype, {
+    stamina: { 
+        get: function() { return this._stamina; },
+        set: function(s) { if(s >= 0 && s <= 100) { this._stamina = s; } else if( s > 100 ) { this._stamina = 100; } else { this._stamina = 0; } },
+        configurable: true 
+    }
+});
+
+    
+Game_Player.prototype.updateDashing = function() {
+    if(this._dashing) {
+        this.stamina -= 0.25;
+        if(this.stamina <= 0) {
+            this._dashing = false;
+            return;    
+        }
+    } else {
+        this.stamina += 0.25;
+    }
+};
+
 })();
