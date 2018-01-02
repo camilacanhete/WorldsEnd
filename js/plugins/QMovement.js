@@ -2460,6 +2460,15 @@ function ColliderManager() {
     } else {
       this.checkEventTriggerTouchFront(this.direction8(horz, vert));
     }
+      
+      
+    if (this._direction === this.reverseDir(horz)) {
+        this.setDirection(horz);
+    }
+    if (this._direction === this.reverseDir(vert)) {
+        this.setDirection(vert);
+    }  
+      
     this._moveSpeed = originalSpeed;
     if (!this.isMovementSucceeded() && this.smartMove() > 1) {
       if (this.canPixelPass(this._px, this._py, horz)) {
@@ -2468,7 +2477,39 @@ function ColliderManager() {
         this.moveStraight(vert);
       }
     }
+      
+      
+     /*  this.setDiagonalDirection(horz, vert);
+    //dsc_Game_CharacterBase_moveDiagonally.call(this, horz, vert);
+    
+    //csantos: pixel movement portion below
+    var dirX = this.quadDirX(horz);
+    var dirY = this.quadDirY(vert);
+    var x = $gameMap.roundXWithDirectionQuad(this._x, horz, dirX);
+    var y = $gameMap.roundYWithDirectionQuad(this._y, vert, dirY);
+    
+    this.setMovementSuccess(this.canPassDiagonally(this._x, this._y, horz, vert));
+    if (this.isMovementSucceeded()) {
+        this._tileQuadrant.x = dirX;
+        this._tileQuadrant.y = dirY;
+        this._x = x;
+        this._y = y;
+        this._realX = $gameMap.xWithDirectionQuad(this._x, this.reverseDir(horz), dirX);
+        this._realY = $gameMap.yWithDirectionQuad(this._y, this.reverseDir(vert), dirX);
+        this.increaseSteps();
+    }
+    if (this._direction === this.reverseDir(horz)) {
+        this.setDirection(horz);
+    }
+    if (this._direction === this.reverseDir(vert)) {
+        this.setDirection(vert);
+    }
+    
+    this.diagonalDirection();
+    if (!this.isMovementSucceeded()) this.checkEventTriggerTouchFront(this._diagonal);*/
   };
+    
+    
 
   Game_CharacterBase.prototype.moveRadian = function(radian, dist) {
     dist = dist || this.moveTiles();

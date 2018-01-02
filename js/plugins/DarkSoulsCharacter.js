@@ -512,50 +512,70 @@ Game_CharacterBase.prototype.animationWait = function() {
     return dsc_CharacterBase_animationWait.call(this) - this._patSpd;
 };
 
+//csantos: new function to return leader when calling game player actor
+Game_Player.prototype.actor = function() {
+    return $gameParty.leader();
+};
+
 //@override - csantos: this function controls player spritesheet animation
 var dsc_Game_Player_updateAnimation = Game_Player.prototype.updateAnimation;
 Game_Player.prototype.updateAnimation = function() {
-    
-    if(this._isMoving && !this._characterWasMoving) {
+    if(this.isMoving() && !this._characterWasMoving) {
         this._cframes = 6;
         this.actor()._characterName = "Walk";
         this.refresh();
         
-    } else if(!this._isMoving && this._characterWasMoving) {
+    } else if(!this.isMoving() && this._characterWasMoving) {
         this._cframes = 1;
         this.actor()._characterName = "Stand";
         this.refresh();
         ////this.actor().setCharacterImage("Stand", 0);
     }
     
-    this._characterWasMoving = this._isMoving;
+    this._characterWasMoving = this.isMoving();
 
     dsc_Game_Player_updateAnimation.call(this);
-};    
+};
     
 //------------------------------------------------------------------------------------------------------------------------------------
 // STAMINA
 //------------------------------------------------------------------------------------------------------------------------------------
  
 //csantos: define a new property on Game_CharacterBase so we can use $gamePlayer.stamina to get stamina value
-Object.defineProperties(Game_CharacterBase.prototype, {
+Object.defineProperties(Game_BattlerBase.prototype, {
+    mp: { 
+        get: function() { return this._mp; },
+        set: function(s) { if(s >= 0 && s <= this.mmp) { this._mp = s; } else if( s > this.mmp ) { this._mp = this.mmp; } else { this._mp = 0; } },
+        configurable: true 
+    }
+});
+    
+/*Object.defineProperties(Game_CharacterBase.prototype, {
     stamina: { 
         get: function() { return this._stamina; },
         set: function(s) { if(s >= 0 && s <= 100) { this._stamina = s; } else if( s > 100 ) { this._stamina = 100; } else { this._stamina = 0; } },
         configurable: true 
     }
-});
+});*/
 
     
 Game_Player.prototype.updateDashing = function() {
-    if(this._dashing) {
-        this.stamina -= 0.25;
+    if(this.isMoving() && this._dashing) {
+        this.actor().mp -= 0.25;
+        if(this.actor().mp <= 0) {
+            this._dashing = false;
+            return;    
+        }      
+        /*this.stamina -= 0.25;
         if(this.stamina <= 0) {
             this._dashing = false;
             return;    
-        }
+        }*/
+        
     } else {
-        this.stamina += 0.25;
+        //this.stamina += 0.25;
+        //console.log(this.actor().mrg);
+        this.actor().mp += this.actor().mrg;
     }
 };
 
