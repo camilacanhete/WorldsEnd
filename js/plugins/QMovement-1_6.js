@@ -2462,6 +2462,9 @@ function ColliderManager() {
   Game_CharacterBase.prototype.update = function() {
     var prevX = this._realPX;
     var prevY = this._realPY;
+      
+    this.updateCommands(); //csantos: custom function to check input commands
+      
     if (this.startedMoving()) {
       this._isMoving = true;
     } else {

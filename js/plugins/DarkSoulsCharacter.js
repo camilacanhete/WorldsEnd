@@ -28,6 +28,10 @@
  *@desc Array of directions (max 8 directions). DO NOT INCLUDE ANY SPACES
  *@default BOTTOM,BOTTOMLEFT,BOTTOMRIGHT,LEFT,RIGHT,TOPLEFT,TOPRIGHT,TOP
  *
+ *@param MP_RECOVERY
+ *@desc Recovery formula for stamina (mp)
+ *@default a.level * 0.001 * a.mmp
+ *
  */
 
 
@@ -39,6 +43,7 @@ var dsc_sprite_height = Number(PluginManager.parameters('DarkSoulsCharacter')["S
 var dsc_animation_speed = Number(PluginManager.parameters('DarkSoulsCharacter')["ANIMATION_SPEED"]);
 var dsc_move_speed = Number(PluginManager.parameters('DarkSoulsCharacter')["MOVE_SPEED"]);
 var dsc_sprite_directions = String(PluginManager.parameters('DarkSoulsCharacter')["DIRECTIONS"]).split(",");
+var dsc_mp_recovery_formula = String(PluginManager.parameters('DarkSoulsCharacter')["MP_RECOVERY"]).replace(/a./gi, "this.actor().");
 var dsc_direction = 0;
 
 //------------------------------------------------------------------------------------------------------------------------------------
@@ -55,6 +60,8 @@ Game_CharacterBase.prototype.initMembers = function() {
     this._moveSpeed = dsc_move_speed;
     this._characterWasMoving = false;
     this._tileQuadrant = { x: 0, y: 0 };
+    this._isAttacking = false;
+    this._characterWasAttacking = false;
 };    
 
 //@override - csantos: enabling diagonal movement - from default 4 directions to 8 directions
@@ -499,17 +506,24 @@ Game_CharacterBase.prototype.pattern = function() {
 
 //@override - csantos: this function resets _pattern 
 Game_CharacterBase.prototype.updatePattern = function() {
-    if (!this.hasStepAnime() && this._stopCount > 0) {
+    
+    //csantos: in order to make the attack animation continuous, we need to make an exception for it
+    if (!this.isAttacking() && !this.hasStepAnime() && this._stopCount > 0) {
         this.resetPattern();
     } else {
 		this._pattern = (this._pattern + 1) % (this._cframes + this._spattern);
+        
+        //console.log(this._pattern);
+        
+        //csantos: reset attack
+        if(this._pattern === 0 && this.isAttacking()) { this.resetAttack(); }
     }
 };
 
 //@override - csantos: this function controls animation speed
 var dsc_CharacterBase_animationWait = Game_CharacterBase.prototype.animationWait;
 Game_CharacterBase.prototype.animationWait = function() {
-    return dsc_CharacterBase_animationWait.call(this) - this._patSpd;
+    return dsc_CharacterBase_animationWait.call(this) - ((this._isAttacking) ? this._patSpd * 2.5 : this._patSpd);
 };
 
 //csantos: new function to return leader when calling game player actor
@@ -520,21 +534,41 @@ Game_Player.prototype.actor = function() {
 //@override - csantos: this function controls player spritesheet animation
 var dsc_Game_Player_updateAnimation = Game_Player.prototype.updateAnimation;
 Game_Player.prototype.updateAnimation = function() {
-    if(this.isMoving() && !this._characterWasMoving) {
+    
+    if(this.isAttacking()) {
+        this._cframes = 5;
+        this.actor()._characterName = "Attack";
+        //console.log("actor is attacking");
+    }
+    else if(this.isMoving()) {
         this._cframes = 6;
         this.actor()._characterName = "Walk";
-        this.refresh();
+        //console.log("actor is moving");
         
-    } else if(!this.isMoving() && this._characterWasMoving) {
+    }
+    else {
         this._cframes = 1;
         this.actor()._characterName = "Stand";
-        this.refresh();
+        //console.log("actor is standing");
         ////this.actor().setCharacterImage("Stand", 0);
     }
     
+    this.refresh();
     this._characterWasMoving = this.isMoving();
-
+    this._characterWasAttacking = this.isAttacking();
+    
     dsc_Game_Player_updateAnimation.call(this);
+};
+
+var dsc_Game_CharacterBase_updateAnimationCount = Game_CharacterBase.prototype.updateAnimationCount;    
+Game_CharacterBase.prototype.updateAnimationCount = function() {
+    
+    if(this.isAttacking()) {
+        this._animationCount++;
+        return;
+    }
+    
+    dsc_Game_CharacterBase_updateAnimationCount.call(this);
 };
     
 //------------------------------------------------------------------------------------------------------------------------------------
@@ -575,8 +609,34 @@ Game_Player.prototype.updateDashing = function() {
     } else {
         //this.stamina += 0.25;
         //console.log(this.actor().mrg);
-        this.actor().mp += this.actor().mrg;
+        //this.actor().mp += this.actor().mrg;
+        //console.log(dsc_mp_recovery_formula);
+        this.actor().mp += eval(dsc_mp_recovery_formula);
+        console.log(this.actor().mp);
     }
 };
 
 })();
+
+//------------------------------------------------------------------------------------------------------------------------------------
+// ADDITIONAL MOVEMENTS - ATTACK
+//------------------------------------------------------------------------------------------------------------------------------------
+
+Game_CharacterBase.prototype.isAttacking = function() {
+    return this._isAttacking;
+};
+
+Game_CharacterBase.prototype.resetAttack = function() {
+    this._isAttacking = false;
+};
+
+Game_Player.prototype.updateCommands = function() {
+    
+    if(Input.isPressed("N")) {
+        if(!this._isAttacking && this.actor().mp >= 10) { 
+            this._pattern = 0;
+            this.actor().mp -= 10;
+            this._isAttacking = true;
+        }
+    }
+};

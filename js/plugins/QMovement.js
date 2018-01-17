@@ -2289,6 +2289,11 @@ function ColliderManager() {
   Game_CharacterBase.prototype.update = function() {
     var prevX = this._realPX;
     var prevY = this._realPY;
+    
+    //csantos: 
+    this.updateAnimation();
+    if(this.isAttacking()) return;
+      
     if (this.startedMoving()) {
       this._isMoving = true;
     } else {
@@ -2302,8 +2307,7 @@ function ColliderManager() {
     } else if (this.isMoving()) {
       this.updateMove();
     }
-      
-    this.updateAnimation();
+    
     this.updateColliders();
     if (prevX !== this._realPX || prevY !== this._realPY) {
       this.onPositionChange();
@@ -2317,6 +2321,7 @@ function ColliderManager() {
   Game_CharacterBase.prototype.updateMove = function() {
     var xSpeed = 1;
     var ySpeed = 1;
+      
     if (this._adjustFrameSpeed) {
       xSpeed = Math.cos(this._radian);
       ySpeed = Math.sin(this._radian);
@@ -3243,6 +3248,9 @@ function ColliderManager() {
     var lastScrolledX = this.scrolledX();
     var lastScrolledY = this.scrolledY();
     var wasMoving = this.isMoving();
+      
+    this.updateCommands(); //csantos: custom function to check input commands  
+      
     this.updateDashing();
     if (sceneActive) {
       this.moveByInput();
