@@ -19,6 +19,14 @@
  *@desc Set background hp image filename inside img/gui folder
  *@default health_bar_foreground
  *
+ *@param BACKGROUND_HP_IMAGE_WIDTH
+ *@desc Set background stamina image width
+ *@default 196
+ *
+ *@param BACKGROUND_HP_IMAGE_HEIGHT
+ *@desc Set background stamina image height
+ *@default 64
+ *
  *@param FOREGROUND_HP_IMAGE_WIDTH
  *@desc Set background hp image width
  *@default 256
@@ -43,6 +51,14 @@
  *@desc Set background stamina image filename inside img/gui folder
  *@default stamina_bar_foreground
  *
+ *@param BACKGROUND_STAMINA_IMAGE_WIDTH
+ *@desc Set background stamina image width
+ *@default 196
+ *
+ *@param BACKGROUND_STAMINA_IMAGE_HEIGHT
+ *@desc Set background stamina image height
+ *@default 32
+ *
  *@param FOREGROUND_STAMINA_IMAGE_WIDTH
  *@desc Set background stamina image width
  *@default 256
@@ -59,6 +75,8 @@
 var dsc_background_hp_image_name = String(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_HP_IMAGE_NAME"]);
 var dsc_background_hp_x_offset = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_HP_X_OFFSET"]);
 var dsc_background_hp_y_offset = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_HP_Y_OFFSET"]);
+var dsc_background_hp_image_width = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_HP_IMAGE_WIDTH"]);
+var dsc_background_hp_image_height = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_HP_IMAGE_HEIGHT"]);
 var dsc_foreground_hp_image_name = String(PluginManager.parameters('DarkSoulsHealthBar')["FOREGROUND_HP_IMAGE_NAME"]);
 var dsc_foreground_hp_image_width = Number(PluginManager.parameters('DarkSoulsHealthBar')["FOREGROUND_HP_IMAGE_WIDTH"]);
 var dsc_foreground_hp_image_height = Number(PluginManager.parameters('DarkSoulsHealthBar')["FOREGROUND_HP_IMAGE_HEIGHT"]);
@@ -66,6 +84,8 @@ var dsc_foreground_hp_image_height = Number(PluginManager.parameters('DarkSoulsH
 var dsc_background_stamina_image_name = String(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_STAMINA_IMAGE_NAME"]);
 var dsc_background_stamina_x_offset = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_STAMINA_X_OFFSET"]);
 var dsc_background_stamina_y_offset = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_STAMINA_Y_OFFSET"]);
+var dsc_background_stamina_image_width = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_STAMINA_IMAGE_WIDTH"]);
+var dsc_background_stamina_image_height = Number(PluginManager.parameters('DarkSoulsHealthBar')["BACKGROUND_STAMINA_IMAGE_HEIGHT"]);
 var dsc_foreground_stamina_image_name = String(PluginManager.parameters('DarkSoulsHealthBar')["FOREGROUND_STAMINA_IMAGE_NAME"]);
 var dsc_foreground_stamina_image_width = Number(PluginManager.parameters('DarkSoulsHealthBar')["FOREGROUND_STAMINA_IMAGE_WIDTH"]);
 var dsc_foreground_stamina_image_height = Number(PluginManager.parameters('DarkSoulsHealthBar')["FOREGROUND_STAMINA_IMAGE_HEIGHT"]);
@@ -109,8 +129,8 @@ PlayerGUI.prototype.initialize = function(x, y) {
 
 PlayerGUI.prototype.refresh = function(){
     this.contents.clear();
-    this._guiHPBackground.setFrame(0, 0, (dsc_foreground_hp_image_width * $gameParty.leader().hp/$gameParty.leader().mhp), dsc_foreground_hp_image_height);
-    this._guiStaminaBackground.setFrame(0, 0, (dsc_foreground_stamina_image_width * $gameParty.leader().mp/$gameParty.leader().mmp), dsc_foreground_stamina_image_height);
+    this._guiHPBackground.setFrame(0, 0, (dsc_background_hp_image_width * $gameParty.leader().hp/$gameParty.leader().mhp), dsc_background_hp_image_height);
+    this._guiStaminaBackground.setFrame(0, 0, (dsc_background_stamina_image_width * $gameParty.leader().mp/$gameParty.leader().mmp), dsc_background_stamina_image_height);
 };
 
 PlayerGUI.prototype.windowWidth = function() {
