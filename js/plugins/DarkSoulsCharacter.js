@@ -34,6 +34,8 @@
  *
  */
 
+var Imported = Imported || {};
+Imported.DarkSoulsCharacter = '0.0.1';
 
 (function() {
 	
@@ -61,259 +63,13 @@ Game_CharacterBase.prototype.initMembers = function() {
     this._characterWasMoving = false;
     this._tileQuadrant = { x: 0, y: 0 };
     this._isAttacking = false;
+    this._isRolling = false;
     this._characterWasAttacking = false;
 };    
 
 //@override - csantos: enabling diagonal movement - from default 4 directions to 8 directions
 Game_Player.prototype.getInputDirection = function() {
     return Input.dir8;
-};
-    
-Game_CharacterBase.prototype.quadDirX = function(d) {
-	var quad = this._tileQuadrant.x;
-	if (d === 6) {
-		quad = this._tileQuadrant.x + 1;
-		if (quad > 2) quad = 0;
-	} else if (d === 4) {
-		quad = this._tileQuadrant.x - 1;
-		if (quad < 0) quad = 2;
-	}
-	return quad;
-};
-
-Game_CharacterBase.prototype.quadDirY = function(d) {
-	var quad = this._tileQuadrant.y;
-	if (d === 2) {
-		quad = this._tileQuadrant.y + 1;
-		if (quad > 2) quad = 0;
-	} else if (d === 8) {
-		quad = this._tileQuadrant.y - 1;
-		if (quad < 0) quad = 2;
-	}
-	return quad;
-};
-    
-Game_CharacterBase.prototype.canPassTile = function(x, y) {
-    if (!$gameMap.isValid(x, y)) {
-        return false;
-    }
-    if (this.isThrough() || this.isDebugThrough()) {
-        return true;
-    }
-    if (!$gameMap.isPassable(x, y, this._direction)) {
-        return false;
-    }
-    if (this.isCollidedWithCharacters(x, y)) {
-        return false;
-    }
-    return true;
-};
-  
-var dsc_Game_CharacterBase_canPass = Game_CharacterBase.prototype.canPass;
-Game_CharacterBase.prototype.canPass = function(x, y, d, qx, qy) {
-    var x = Math.round(x);
-	var y = Math.round(y);
-    
-    if(qx && qy) {
-        switch (d) {
-            case 6:
-                if (qx === 1) {
-                    if (!dsc_Game_CharacterBase_canPass.call(this, x, y, d)) return false;
-                    if (qy === 1) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x, y + 1, d);
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(9);
-                        return pass;
-                    }
-                    if (qy === 2) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x, y - 1, d);
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(3);
-                        return pass;
-                    }
-                } else if (qx === 2 && this._tileQuadrant.x === 1) {
-                    return this.canPassTile(x,y);  // if caught up against something
-                }
-                return true;
-                break;
-            case 4:
-                if (qx === 2) {
-                    if (!dsc_Game_CharacterBase_canPass.call(this, x, y, d)) return false;
-                    if (qy === 1) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x, y + 1, d);
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(7);
-                        return pass;
-                    }
-                    if (qy === 2) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x, y - 1, d);
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(1);
-                        return pass;
-                    }
-                } else if (qx === 1 && this._tileQuadrant.x === 2) {
-                    return this.canPassTile(x,y);  // if caught up against something
-                }
-                return true;
-                break;
-            case 8:
-                if (qy === 2) {
-                    if (!dsc_Game_CharacterBase_canPass.call(this, x, y, d)) return false;
-                    if (qx === 1) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x + 1, y, d);
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(7);
-                        return pass;
-                    }
-                    if (qx === 2) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x - 1, y, d);
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(9);
-                        return pass;
-                    }
-                } else if (qy === 1 && this._tileQuadrant.y === 2) {
-                    return this.canPassTile(x,y);  // if caught up against something
-                }
-                return true;
-                break;
-            case 2:
-                if (qy === 1) {
-                    if (!dsc_Game_CharacterBase_canPass.call(this, x, y, d)) return false;
-                    if (qx === 1) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x + 1, y, d);  // do diagonal down left around event here?
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(1);
-                        return pass;
-                    }
-                    if (qx === 2) {
-                        var pass = dsc_Game_CharacterBase_canPass.call(this, x - 1, y, d);  // do diagonal down right around event here?
-                        //if (!pass) this._diagSlide = Galv.PMOVE.getHorzVertDirs(3);
-                        return pass;
-                    }
-                } else if (qy === 2 && this._tileQuadrant.y === 1) {
-                    return this.canPassTile(x,y);  // if caught up against something
-                }
-                return true;
-                break;
-        }
-    }
-    
-    return dsc_Game_CharacterBase_canPass.call(this, x, y, d);
-};
- 
-//csanto: new function to return a tile partition
-Game_Map.prototype.quadMod = function(q) {
-    switch(q) {
-        case 1:
-            return 0.33;
-        break;
-        case 2:
-            return 0.67;
-        break;
-        
-    }
-    return 0;
-};
-    
-//csantos: new function similar to xWithDirectionQuad that calculates a portion of X movement 
-//(we're making a new function to make calculations faster)
-Game_Map.prototype.xWithDirectionQuad = function(x, d, q) {
-	var x = x + (d === 6 ? 0.33 : d === 4 ? -0.33 : 0);
-	return Math.round(x * 100) / 100;
-};
-
-//csantos: new function similar to yWithDirectionQuad that calculates a portion of Y movement 
-//(we're making a new function to make calculations faster)
-Game_Map.prototype.yWithDirectionQuad = function(y, d) {
-    return y + (d === 2 ? 0.33 : d === 8 ? -0.33 : 0);
-};
-
-//csantos: new function similar to roundXWithDirection that calculates a portion of X movement 
-//(we're making a new function to make calculations faster)
-Game_Map.prototype.roundXWithDirectionQuad = function(x, d, q) {
-	var mod = this.quadMod(q);	
-	if (d === 6) {
-		x = q === 0 ? Math.floor(x) + 1 + mod : Math.floor(x) + mod;
-	} else if (d === 4) {
-		x = q === 2 ? Math.floor(x) - 1 + mod : Math.floor(x) + mod;
-	}
-	return this.roundX(x);
-};
-
-//csantos: new function similar to roundYWithDirection that calculates a portion of Y movement 
-//(we're making a new function to make calculations faster)
-Game_Map.prototype.roundYWithDirectionQuad = function(y, d, q) {
-	var mod = this.quadMod(q);	
-	if (d === 2) {
-		y = q === 0 ? Math.floor(y) + 1 + mod : Math.floor(y) + mod;
-	} else if (d === 8) {
-		y = q === 2 ? Math.floor(y) - 1 + mod : Math.floor(y) + mod;
-	}
-	return this.roundY(y);
-};
-
-
-// @override - csantos: overriding moveStraight to reset _diagonal variable
-var dsc_Game_CharacterBase_moveStraight = Game_CharacterBase.prototype.moveStraight;
-Game_CharacterBase.prototype.moveStraight = function(d) {
-    if (d % 2 !== 0) {
-        this._diagonal = d;
-        var horz = (d === 1 || d === 7) ? 4 : 6;
-        var vert = (d === 1 || d === 3) ? 2 : 8;
-        this.moveDiagonally(horz, vert)
-    } else {
-        this._diagonal = 0;
-        
-        //csantos: pixel movement portion below
-        var dirX = this.quadDirX(d);
-        var dirY = this.quadDirY(d);
-        var x = $gameMap.roundXWithDirectionQuad(this._x, d, dirX);
-        var y = $gameMap.roundYWithDirectionQuad(this._y, d, dirY);
-        
-        this.setMovementSuccess(this.canPass(x, y, d, dirX, dirY));
-
-        if (this.isMovementSucceeded()) {
-            this.setDirection(d);
-            this._tileQuadrant.x = dirX;
-            this._tileQuadrant.y = dirY;
-            this._x = x;
-            this._y = y;
-            this._realX = $gameMap.xWithDirectionQuad(this._x, this.reverseDir(d), dirX);
-            this._realY = $gameMap.yWithDirectionQuad(this._y, this.reverseDir(d), dirY);
-            this.increaseSteps();
-        }  else {
-            this.setDirection(d);
-            this.checkEventTriggerTouchFront(d);
-        }
-        
-        //dsc_Game_CharacterBase_moveStraight.call(this, d);
-    }
-};    
-    
-//@override - csantos: make character move diagonally and set proper direction to it
-var dsc_Game_CharacterBase_moveDiagonally = Game_CharacterBase.prototype.moveDiagonally;
-Game_CharacterBase.prototype.moveDiagonally = function(horz, vert) {
-    this.setDiagonalDirection(horz, vert);
-    //dsc_Game_CharacterBase_moveDiagonally.call(this, horz, vert);
-    
-    //csantos: pixel movement portion below
-    var dirX = this.quadDirX(horz);
-    var dirY = this.quadDirY(vert);
-    var x = $gameMap.roundXWithDirectionQuad(this._x, horz, dirX);
-    var y = $gameMap.roundYWithDirectionQuad(this._y, vert, dirY);
-    
-    this.setMovementSuccess(this.canPassDiagonally(this._x, this._y, horz, vert));
-    if (this.isMovementSucceeded()) {
-        this._tileQuadrant.x = dirX;
-        this._tileQuadrant.y = dirY;
-        this._x = x;
-        this._y = y;
-        this._realX = $gameMap.xWithDirectionQuad(this._x, this.reverseDir(horz), dirX);
-        this._realY = $gameMap.yWithDirectionQuad(this._y, this.reverseDir(vert), dirX);
-        this.increaseSteps();
-    }
-    if (this._direction === this.reverseDir(horz)) {
-        this.setDirection(horz);
-    }
-    if (this._direction === this.reverseDir(vert)) {
-        this.setDirection(vert);
-    }
-    
-    this.diagonalDirection();
-    if (!this.isMovementSucceeded()) this.checkEventTriggerTouchFront(this._diagonal);
 };
 
 //csantos: creating a new function to set _diagonal value
@@ -357,24 +113,8 @@ Game_Character.prototype.diagonalMovement = function(d) {
 var dsc_Game_CharacterBase_distancePerFrame = Game_CharacterBase.prototype.distancePerFrame;
 Game_CharacterBase.prototype.distancePerFrame = function() {
     var distance = dsc_Game_CharacterBase_distancePerFrame.call(this);
-    if (this.isDiagonal()) distance /= Math.sqrt(2);
+    if (this.isDiagonal() && !this.isRolling()) distance /= Math.sqrt(2);
     return distance;
-};
-
-//@override - csantos: check if event was triggered while character was diagonally aligned
-var dsc_Game_CharacterBase_checkEventTriggerTouchFront = Game_CharacterBase.prototype.checkEventTriggerTouchFront;
-Game_CharacterBase.prototype.checkEventTriggerTouchFront = function(d) {
-    if (d % 2 !== 0){
-        var horz = ((d === 1 || d === 7) ? 4 : 6);
-        var vert = ((d === 1 || d === 3) ? 2 : 8);
-        var x2 = $gameMap.roundXWithDirection(this.x, horz);
-        var y2 = $gameMap.roundYWithDirection(this.y, vert);
-        this.checkEventTriggerTouch(x2, y2);
-        if (!$gameMap.isEventRunning()) this.checkEventTriggerTouch(this.x, y2);
-        if (!$gameMap.isEventRunning()) this.checkEventTriggerTouch(x2, this.y);
-    } else {
-        dsc_Game_CharacterBase_checkEventTriggerTouchFront.call(this, d)
-    }				
 };
 
 //@override - csantos: overriding copyPosition in order to copy _diagonal variable aswell
@@ -401,21 +141,33 @@ Game_Player.prototype.executeMove = function(direction) {
 // CHARACTER ANIMATION
 //------------------------------------------------------------------------------------------------------------------------------------
 
+//csantos: create new sprite class inherit from Sprite_Character to customize player's sprite only
+function Sprite_Player() {
+    this.initialize.apply(this, arguments);
+}
+    
+Sprite_Player.prototype = Object.create(Sprite_Character.prototype);
+Sprite_Player.prototype.constructor = Sprite_Player;
+    
+/*Sprite_Player.prototype.initialize = function() {
+    Sprite_Character.prototype.initialize.call(this);
+};*/
+    
 // @override - csantos: setting a custom spritesheet bitmap
-var dsc_Sprite_Character_setCharacterBitmap = Sprite_Character.prototype.setCharacterBitmap;
-Sprite_Character.prototype.setCharacterBitmap = function() {
+var dsc_Sprite_Player_setCharacterBitmap = Sprite_Player.prototype.setCharacterBitmap;
+Sprite_Player.prototype.setCharacterBitmap = function() {
 	
     this._character._cframes = !this._character._cframes ? dsc_sprite_width : this._character._cframes;
     this._character._spattern = 0;
     this._character._patSpd = this._character._cframes * dsc_animation_speed;
     //this._cframes = this._character._cframes;
     
-	dsc_Sprite_Character_setCharacterBitmap.call(this);
+	dsc_Sprite_Player_setCharacterBitmap.call(this);
 };
 
 //@override - csantos: this function controls which sprite block character is, since the spritesheet can have up to 8 different characters (default is 0)
-var dsc_Sprite_Character_characterBlockX = Sprite_Character.prototype.characterBlockX;
-Sprite_Character.prototype.characterBlockX = function() {
+var dsc_Sprite_Player_characterBlockX = Sprite_Player.prototype.characterBlockX;
+Sprite_Player.prototype.characterBlockX = function() {
     if (this._isBigCharacter) {
         return 0;
     } else {
@@ -425,26 +177,26 @@ Sprite_Character.prototype.characterBlockX = function() {
 };
 
 //@override - csantos: this function controls the sprite width
-Sprite_Character.prototype.patternWidth = function() {
+Sprite_Player.prototype.patternWidth = function() {
     return this.bitmap.width / this._character._cframes;
 };
    
 //@override - csantos: this function controls the sprite height
-Sprite_Character.prototype.patternHeight = function() {
+Sprite_Player.prototype.patternHeight = function() {
     return this.bitmap.height / dsc_sprite_height;
 };
     
 //@override - csantos: this function controls which row of the sprite pattern should be displayed
-var dsc_Sprite_Character_characterPatternY = Sprite_Character.prototype.characterPatternY;
-Sprite_Character.prototype.characterPatternY = function() {
+var dsc_Sprite_Player_characterPatternY = Sprite_Player.prototype.characterPatternY;
+Sprite_Player.prototype.characterPatternY = function() {
     
     if(this._character.isDiagonal()) return this._character.getDiagonalDirection();
     
-    return dsc_Sprite_Character_characterPatternY.call(this);
+    return dsc_Sprite_Player_characterPatternY.call(this);
 };
 
 //csantos: creating a new function to convert the input direction to the correspondent animation present on the current sprite configuration 
-Sprite_Character.prototype.getAnimationIndex = function(animationIndex) {
+Sprite_Player.prototype.getAnimationIndex = function(animationIndex) {
     
     var animationName = "";
     
@@ -481,7 +233,7 @@ Sprite_Character.prototype.getAnimationIndex = function(animationIndex) {
 //@override - csantos: this function updates character frame
 //The important part is characterPatternY, it controls which row of animation we are displaying at the moment
 //We'll override the animation standard sequence to have more freedom
-Sprite_Character.prototype.updateCharacterFrame = function() {
+Sprite_Player.prototype.updateCharacterFrame = function() {
     var pw = this.patternWidth();
     var ph = this.patternHeight();
     var sx = (this.characterBlockX() + this.characterPatternX()) * pw;
@@ -498,32 +250,51 @@ Sprite_Character.prototype.updateCharacterFrame = function() {
         this.setFrame(sx, sy, pw, ph);
     }
 };
+
+// @override - csantos: create player's character sprite as Sprite_Player and not Sprite_Character
+Spriteset_Map.prototype.createCharacters = function() {
+    this._characterSprites = [];
+    $gameMap.events().forEach(function(event) {
+        this._characterSprites.push(new Sprite_Character(event));
+    }, this);
+    $gameMap.vehicles().forEach(function(vehicle) {
+        this._characterSprites.push(new Sprite_Character(vehicle));
+    }, this);
+    $gamePlayer.followers().reverseEach(function(follower) {
+        this._characterSprites.push(new Sprite_Character(follower));
+    }, this);
+    this._characterSprites.push(new Sprite_Player($gamePlayer));
+    for (var i = 0; i < this._characterSprites.length; i++) {
+        this._tilemap.addChild(this._characterSprites[i]);
+    }
+};
     
 // @override - csantos: this function controls the column frames (y axis) from 0 to this._cframes
-Game_CharacterBase.prototype.pattern = function() {
+Game_Player.prototype.pattern = function() {
     return this._pattern < this._cframes ? this._pattern : this._spattern;
 };
 
 //@override - csantos: this function resets _pattern 
-Game_CharacterBase.prototype.updatePattern = function() {
+Game_Player.prototype.updatePattern = function() {
     
     //csantos: in order to make the attack animation continuous, we need to make an exception for it
-    if (!this.isAttacking() && !this.hasStepAnime() && this._stopCount > 0) {
+    if (!this.isAttacking() && !this.isRolling() && !this.hasStepAnime() && this._stopCount > 0) {
         this.resetPattern();
     } else {
 		this._pattern = (this._pattern + 1) % (this._cframes + this._spattern);
         
-        //console.log(this._pattern);
-        
         //csantos: reset attack
-        if(this._pattern === 0 && this.isAttacking()) { this.resetAttack(); }
+        if(this._pattern === this._cframes - 1) { 
+            if(this.isAttacking()) this.resetAttack(); 
+            if(this.isRolling()) this.resetRolling(); 
+        }
     }
 };
 
 //@override - csantos: this function controls animation speed
-var dsc_CharacterBase_animationWait = Game_CharacterBase.prototype.animationWait;
-Game_CharacterBase.prototype.animationWait = function() {
-    return dsc_CharacterBase_animationWait.call(this) - ((this._isAttacking) ? this._patSpd * 2.5 : this._patSpd);
+var dsc_Game_Player_animationWait = Game_Player.prototype.animationWait;
+Game_Player.prototype.animationWait = function() {
+    return dsc_Game_Player_animationWait.call(this) - ((this._isAttacking) ? this._patSpd * 2.5 : this._patSpd);
 };
 
 //csantos: new function to return leader when calling game player actor
@@ -538,6 +309,11 @@ Game_Player.prototype.updateAnimation = function() {
     if(this.isAttacking()) {
         this._cframes = 5;
         this.actor()._characterName = "Attack";
+        //console.log("actor is attacking");
+    }
+    else if(this.isRolling()) {
+        this._cframes = 7;
+        this.actor()._characterName = "Roll";
         //console.log("actor is attacking");
     }
     else if(this.isMoving()) {
@@ -560,15 +336,15 @@ Game_Player.prototype.updateAnimation = function() {
     dsc_Game_Player_updateAnimation.call(this);
 };
 
-var dsc_Game_CharacterBase_updateAnimationCount = Game_CharacterBase.prototype.updateAnimationCount;    
-Game_CharacterBase.prototype.updateAnimationCount = function() {
+var dsc_Game_Player_updateAnimationCount = Game_Player.prototype.updateAnimationCount;    
+Game_Player.prototype.updateAnimationCount = function() {
     
-    if(this.isAttacking()) {
+    if(this.isAttacking() || this.isRolling()) {
         this._animationCount++;
         return;
     }
     
-    dsc_Game_CharacterBase_updateAnimationCount.call(this);
+    dsc_Game_Player_updateAnimationCount.call(this);
 };
     
 //------------------------------------------------------------------------------------------------------------------------------------
@@ -612,7 +388,7 @@ Game_Player.prototype.updateDashing = function() {
         //this.actor().mp += this.actor().mrg;
         //console.log(dsc_mp_recovery_formula);
         this.actor().mp += eval(dsc_mp_recovery_formula);
-        console.log(this.actor().mp);
+        //console.log(this.actor().mp);
     }
 };
 
@@ -630,13 +406,54 @@ Game_CharacterBase.prototype.resetAttack = function() {
     this._isAttacking = false;
 };
 
-Game_Player.prototype.updateCommands = function() {
+Game_CharacterBase.prototype.isRolling = function() {
+    return this._isRolling;
+};
+
+Game_CharacterBase.prototype.resetRolling = function() {
+    this._isRolling = false;
+};
+
+//@override - csantos: this function was copied from QABS script to update animation accordingly
+Game_Player.prototype.useSkill = function(skillId, fromEvent) {
     
-    if(Input.isPressed("N")) {
-        if(!this._isAttacking && this.actor().mp >= 10) { 
-            this._pattern = 0;
-            this.actor().mp -= 10;
-            this._isAttacking = true;
-        }
+    if (!this.canInputSkill(fromEvent)) return null;
+    if (!this.canUseSkill(skillId)) return null;
+
+    if (this._groundTargeting) {
+        this.onTargetingCancel();
+    }
+    var skill = this.forceSkill(skillId);
+    if (!this._groundTargeting) {
+        this.battler().paySkillCost($dataSkills[skillId]);
+    }
+    
+    this.updateCommands(skillId);
+    
+    return skill;
+};
+
+Game_Player.prototype.updateCommands = function(id) {
+    
+    switch(id) {
+        case 1:
+            if(!this._isAttacking) { 
+                this._isAttacking = true;
+                this._pattern = 0;
+            }
+        break;
+        case 2:
+            if(!this._isRolling) { 
+                this._isRolling = true;
+                this._isAttacking = false;
+                this._pattern = 0;
+            }
+        break;
     }
 };
+
+/*var dsc_Game_Battler_gainHp = Game_Battler.prototype.gainHp;    
+Game_Battler.prototype.gainHp = function(value) {
+    if($gamePlayer.isRolling()) return;
+    dsc_Game_Battler_gainHp.call(this, value);
+};*/

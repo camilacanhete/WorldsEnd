@@ -2029,6 +2029,7 @@ Game_ActionResult.prototype.isStatusAffected = function() {
 };
 
 Game_ActionResult.prototype.isHit = function() {
+    console.log(this.used && !this.missed && !this.evaded);
     return this.used && !this.missed && !this.evaded;
 };
 

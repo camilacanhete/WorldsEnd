@@ -187,7 +187,9 @@ PlayerGUI.prototype.createStaminaBackground = function() {
     this._guiStaminaBackground.anchor.y = 0;
     this._guiStaminaBackground.x = dsc_background_stamina_x_offset;
     this._guiStaminaBackground.y = dsc_foreground_hp_image_height + dsc_background_stamina_y_offset + 10;
-     console.log($gameParty.leader());
+    //console.log($gameParty.leader());
+    //console.log($gameSystem.absKeys());
+    //console.log($gameSystem.absKeys().filter(function(o) { return o.skillId === 1; }));
 };
     
 PlayerGUI.prototype.setStaminaBackground = function() {
