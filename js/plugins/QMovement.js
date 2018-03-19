@@ -2466,7 +2466,7 @@ function ColliderManager() {
       
     //csantos: 
     this.updateAnimation(); 
-    if(Imported.DarkSoulsCharacter && this.isAttacking()) return;
+    if(Imported.DarkSoulsCharacter && (this.isAttacking() || this.isHealing())) return;
       
     if (this.startedMoving()) {
       this._isMoving = true;

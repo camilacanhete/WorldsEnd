@@ -64,6 +64,7 @@ Game_CharacterBase.prototype.initMembers = function() {
     this._tileQuadrant = { x: 0, y: 0 };
     this._isAttacking = false;
     this._isRolling = false;
+    this._isHealing = false;
     this._characterWasAttacking = false;
 };    
 
@@ -278,7 +279,7 @@ Game_Player.prototype.pattern = function() {
 Game_Player.prototype.updatePattern = function() {
     
     //csantos: in order to make the attack animation continuous, we need to make an exception for it
-    if (!this.isAttacking() && !this.isRolling() && !this.hasStepAnime() && this._stopCount > 0) {
+    if (!this.isAttacking() && !this.isRolling() && !this.isHealing() && !this.hasStepAnime() && this._stopCount > 0) {
         this.resetPattern();
     } else {
 		this._pattern = (this._pattern + 1) % (this._cframes + this._spattern);
@@ -286,7 +287,8 @@ Game_Player.prototype.updatePattern = function() {
         //csantos: reset attack
         if(this._pattern === this._cframes - 1) { 
             if(this.isAttacking()) this.resetAttack(); 
-            if(this.isRolling()) this.resetRolling(); 
+            if(this.isRolling()) this.resetRolling();
+            if(this.isHealing()) this.resetHealing();
         }
     }
 };
@@ -316,6 +318,11 @@ Game_Player.prototype.updateAnimation = function() {
         this.actor()._characterName = "Roll";
         //console.log("actor is attacking");
     }
+    else if(this.isHealing()) {
+        this._cframes = 10;
+        this.actor()._characterName = "Heal";
+        //console.log("actor is attacking");
+    }
     else if(this.isMoving()) {
         this._cframes = 6;
         this.actor()._characterName = "Walk";
@@ -339,7 +346,7 @@ Game_Player.prototype.updateAnimation = function() {
 var dsc_Game_Player_updateAnimationCount = Game_Player.prototype.updateAnimationCount;    
 Game_Player.prototype.updateAnimationCount = function() {
     
-    if(this.isAttacking() || this.isRolling()) {
+    if(this.isAttacking() || this.isRolling() || this.isHealing()) {
         this._animationCount++;
         return;
     }
@@ -414,6 +421,14 @@ Game_CharacterBase.prototype.resetRolling = function() {
     this._isRolling = false;
 };
 
+Game_CharacterBase.prototype.isHealing = function() {
+    return this._isHealing;
+};
+
+Game_CharacterBase.prototype.resetHealing = function() {
+    this._isHealing = false;
+};
+
 //@override - csantos: this function was copied from QABS script to update animation accordingly
 Game_Player.prototype.useSkill = function(skillId, fromEvent) {
     
@@ -429,6 +444,7 @@ Game_Player.prototype.useSkill = function(skillId, fromEvent) {
     }
     
     this.updateCommands(skillId);
+    this.payItemCost(skillId);
     
     return skill;
 };
@@ -445,6 +461,13 @@ Game_Player.prototype.updateCommands = function(id) {
         case 2:
             if(!this._isRolling) { 
                 this._isRolling = true;
+                this._isAttacking = false;
+                this._pattern = 0;
+            }
+        break;
+        case 3:
+            if(!this._isHealing) {
+                this._isHealing = true;
                 this._isAttacking = false;
                 this._pattern = 0;
             }

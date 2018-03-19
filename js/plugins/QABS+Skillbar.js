@@ -338,10 +338,10 @@ function Sprite_SkillInfo() {
     if (this.needsRefresh()) {
       this.refresh();
     }
-    if (Imported.QInput && this._preferGamePad !== Input.preferGamepad()) {
+    //if (Imported.QInput && this._preferGamePad !== Input.preferGamepad()) { //csantos: refresh input all the time to show amount of items
       this._preferGamePad = Input.preferGamepad();
       this.refreshInput();
-    }
+    //}
     if (this.isButtonTouched()) {
       this.updateHover();
     } else {
@@ -430,22 +430,29 @@ function Sprite_SkillInfo() {
   Sprite_SkillButton.prototype.refreshInput = function() {
     var absKey = $gameSystem.absKeys()[this._key];
     var input = absKey.input[0] || '';
-    if (Imported.QInput) {
-      var inputs = absKey.input;
-      for (var i = 0; i < inputs.length; i++) {
-        var isGamepad = /^\$/.test(inputs[i]);
-        if (Input.preferGamepad() && isGamepad) {
-          input = inputs[i];
-          break;
-        } else if (!Input.preferGamepad() && !isGamepad) {
-          input = inputs[i];
-          break;
+    var itemConsumable =  this._skillSettings.itemConsumable; //csantos: show amount of items instead of command when items are consumable
+      
+    if(itemConsumable > 0) {
+        input = $gameParty.numItems($dataItems[itemConsumable]);
+    } else {
+        if (Imported.QInput) {
+          var inputs = absKey.input;
+          for (var i = 0; i < inputs.length; i++) {
+            var isGamepad = /^\$/.test(inputs[i]);
+            if (Input.preferGamepad() && isGamepad) {
+              input = inputs[i];
+              break;
+            } else if (!Input.preferGamepad() && !isGamepad) {
+              input = inputs[i];
+              break;
+            }
+          }
         }
-      }
+
+        input = input.replace('#', '');
+        input = input.replace('$', '');
+        input = input.replace('mouse', 'M');
     }
-    input = input.replace('#', '');
-    input = input.replace('$', '');
-    input = input.replace('mouse', 'M');
     this._spriteInput.bitmap.clear();
     this._spriteInput.bitmap.drawText(input, 0, 8, 34, 34, 'center');
   };

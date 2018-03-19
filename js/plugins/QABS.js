@@ -324,6 +324,13 @@ Imported.QABS = '1.6.3';
  * throughTerrain: [LIST OF TERRAINS IT CAN GO THROUGH]
  * groundtarget: [NUMBER]
  * selecttarget: [NUMBER]
+ * ~~~ 
+ * csantos: Complementing QABS, you can select a consumable item to add in your 
+ * notetag skill settings. This is used to make a skill use an item when
+ * activated. The skill will be only available when that item is in your
+ * inventory.
+ * ~~~
+ *  itemConsumable: [ITEM ID]
  * ~~~
  * - #### collider:
  *  * Set this to the collider this skill will use. See QMovement help for details
@@ -940,6 +947,7 @@ function QABS() {
     if (!this._skillSettings.hasOwnProperty(skill.id)) {
       var settings = skill.qmeta.absSettings;
       this._skillSettings[skill.id] = {
+        itemConsumable: 0, //csantos: adding itemConsumable
         cooldown: 0,
         through: 0,
         groundTarget: false,
@@ -950,6 +958,7 @@ function QABS() {
         // TODO change this, hate how it looks
         settings = QPlus.stringToObj(settings);
         Object.assign(settings, {
+          itemConsumable: Number(settings.itemConsumable) || 0,  //csantos: adding itemConsumable
           cooldown: Number(settings.cooldown) || 0,
           through: Number(settings.through) || 0,
           groundTarget: settings.groundtarget && !settings.selecttarget,
@@ -2958,9 +2967,25 @@ function Skill_Sequencer() {
 
   Game_CharacterBase.prototype.canUseSkill = function(id) {
     var skill = $dataSkills[id];
-    return this.usableSkills().contains(id) && this.battler().canPaySkillCost(skill);
+    return this.usableSkills().contains(id) && this.battler().canPaySkillCost(skill) && this.canUseItem(id); //csantos: adding canUseItem verification
   };
 
+  //csantos: check if there is an item available to consume skill
+  Game_CharacterBase.prototype.canUseItem = function(id) {
+      
+      var item = QABS._skillSettings[id] ? QABS._skillSettings[id].itemConsumable : 0; 
+      
+      if(item !== 0 && $gameParty.numItems($dataItems[item]) <= 0) return false;
+          
+      return true;
+  };  
+
+  //csantos: pay item cost if there is any
+  Game_CharacterBase.prototype.payItemCost = function(id) {
+      var item = QABS._skillSettings[id] ? QABS._skillSettings[id].itemConsumable : 0; 
+      $gameParty.loseItem($dataItems[item], 1);
+  };
+    
   Game_CharacterBase.prototype.usableSkills = function() {
     return [];
   };
