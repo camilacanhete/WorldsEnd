@@ -2269,10 +2269,17 @@ function Skill_Sequencer() {
 
   Skill_Sequencer.prototype.updateSkillDamage = function() {
     var targets = this._skill.targets;
-    for (var i = 0; i < this._skill.ondmg.length; i++) {
-      var action = this._skill.ondmg[i].split(' ');
-      this.startOnDamageAction(action, targets);
+      
+    //csantos: adding verification to continue damage action only if target is not dodging
+    for(var j = 0; j < targets.length; j++) {
+        if(targets[j].isRolling() === false) {
+            for (var i = 0; i < this._skill.ondmg.length; i++) {
+              var action = this._skill.ondmg[i].split(' ');
+              this.startOnDamageAction(action, targets);
+            }
+        }
     }
+      
     QABSManager.startAction(this._character, targets, this._skill);
   };
 
