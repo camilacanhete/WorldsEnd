@@ -1116,6 +1116,20 @@ function QABSManager() {
     });
   };
 
+  //csantos: get only enemy targets with AI
+  QABSManager.getEnemyTargets = function(skill, self) {
+    return ColliderManager.getCharactersNear(skill.collider, function(chara) {
+        if(chara instanceof Game_Event) {
+            if(chara._aiType && chara._aiType !== "none") {
+                var type = skill.settings.collides || 'collision';
+                return skill.collider.intersects(chara.collider(type));
+            }
+        }
+        return false;
+    });
+  };
+  
+  
   QABSManager.bestAction = function(userId) {
     var chara = QPlus.getCharacter(userId);
     if (!chara.battler()) return null;
@@ -1399,7 +1413,6 @@ function Skill_Sequencer() {
         break;
       }
       case 'animation': {
-          console.log(action);
         this.actionAnimation(action);
         break;
       }
@@ -1587,6 +1600,13 @@ function Skill_Sequencer() {
     if (action[0] === 'backward') {
       radian -= Math.PI;
     }
+      
+    //csantos: if user is dodging while targeting an enemy, direction will be the input and not forward 
+    if(this._skill.id === 2 && this._character.getCurrentTarget()) {
+        var direction = QMovement.diagonal ? Input.dir8 : Input.dir4;
+        radian = oldRadian = this._character.directionToRadian(direction);
+    }  
+      
     route.list.push({
       code: Game_Character.ROUTE_SCRIPT,
       parameters: ['qmove2(' + radian + ',' + dist + ')']
@@ -1814,16 +1834,46 @@ function Skill_Sequencer() {
   };
 
   Skill_Sequencer.prototype.actionAdjustAim = function() {
-    if (!this._skill._target) return;
-    var x1 = this._skill.collider.x;
-    var y1 = this._skill.collider.y;
-    var forward = this._skill._target.forwardV();
-    var dt = Math.randomInt(5) || 1;
-    var x2 = this._skill._target.px + forward.x * dt;
-    var y2 = this._skill._target.py + forward.y * dt;
-    var dx = x2 - x1;
-    var dy = y2 - y1;
-    this._skill.radian = Math.atan2(dy, dx);
+    if (!this._skill._target) {
+        //csantos: calculate aim and set target on player's object
+        var targets = QABSManager.getEnemyTargets(this._skill, this._character);
+        
+        if(targets.length > 0) {
+            if($gamePlayer.getCurrentTarget() === null) {
+                $gamePlayer.setCurrentTarget(targets[0]);
+                //$gamePlayer.pushEnemyTarget(targets[0]);
+            } else {
+                var targetIsDifferentFromCurrent = false;
+                for(var i in targets) {
+                    if(targets[i]._battlerId !== $gamePlayer.getCurrentTarget()._battlerId) {
+                        $gamePlayer.setCurrentTarget(targets[i]);
+                        //$gamePlayer.pushEnemyTarget(targets[i]);
+                        targetIsDifferentFromCurrent = true;
+                        break;
+                    }
+                } 
+                
+                if(!targetIsDifferentFromCurrent) {
+                    $gamePlayer.setCurrentTarget(null);
+                    //$gamePlayer.resetEnemyTarget();
+                }
+             }
+        } else {
+            $gamePlayer.setCurrentTarget(null);
+           // $gamePlayer.resetEnemyTarget();
+        }
+    }
+    else {
+        var x1 = this._skill.collider.x;
+        var y1 = this._skill.collider.y;
+        var forward = this._skill._target.forwardV();
+        var dt = Math.randomInt(5) || 1;
+        var x2 = this._skill._target.px + forward.x * dt;
+        var y2 = this._skill._target.py + forward.y * dt;
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        this._skill.radian = Math.atan2(dy, dx);
+    }
   };
 
   Skill_Sequencer.prototype.actionWait = function(action) {
@@ -2879,6 +2929,7 @@ function Skill_Sequencer() {
     this._onDeath = meta.onDeath || '';
     this._dontErase = !!meta.dontErase;
     this._team = Number(meta.team || 2);
+    this._noTarget = !!meta.noTarget;
   };
 
   Game_Enemy.prototype.clearStates = function() {
@@ -3812,7 +3863,7 @@ function Skill_Sequencer() {
     this.straighten();
     this.refreshBushDepth();
   };
-
+    
   Game_Event.prototype.onDeath = function() {
     if (this._onDeath) {
       try {
@@ -3836,7 +3887,13 @@ function Skill_Sequencer() {
     this.clearABS();
     this._respawn = Number(this.battler().enemy().meta.respawn) || -1;
     this._isDead = true;
-    if (!this._dontErase) this.erase();
+      
+    if (!this._dontErase) {
+        this.erase();
+        
+        //csantos: set $gamePLayer target to null
+        $gamePlayer.setCurrentTarget(null);
+    }
   };
 
   Game_Event.prototype.setupLoot = function() {
@@ -4114,8 +4171,11 @@ function Game_Loot() {
       this.setBattler(this._character.battler());
     }
   };
-
+    
+  //csantos: call function above from DarkSoulsHUD
+  var Alias_Sprite_Character_setBattler = Sprite_Character.prototype.setBattler;
   Sprite_Character.prototype.setBattler = function(battler) {
+    Alias_Sprite_Character_setBattler.call(this, battler);
     this._battler = battler;
     this._stateSprite.setup(this._battler);
   };

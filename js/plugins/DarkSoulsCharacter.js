@@ -66,6 +66,8 @@ Game_CharacterBase.prototype.initMembers = function() {
     this._isRolling = false;
     this._isHealing = false;
     this._characterWasAttacking = false;
+    this._currentTarget = null;
+    this._enemiesTargeted = [];
 };    
 
 //@override - csantos: enabling diagonal movement - from default 4 directions to 8 directions
@@ -137,6 +139,13 @@ Game_Player.prototype.executeMove = function(direction) {
         dsc_Game_Player_executeMove.call(this, direction);
     };
 };
+
+//csantos: new function to face enemy (target) when there is one
+Game_CharacterBase.prototype.setDirectionToTarget = function() {
+    var dx = this.deltaPXFrom(this._currentTarget.cx());
+    var dy = this.deltaPYFrom(this._currentTarget.cy());
+    this.setRadian(Math.atan2(-dy, -dx));
+};
     
 //------------------------------------------------------------------------------------------------------------------------------------
 // CHARACTER ANIMATION
@@ -191,6 +200,7 @@ Sprite_Player.prototype.patternHeight = function() {
 var dsc_Sprite_Player_characterPatternY = Sprite_Player.prototype.characterPatternY;
 Sprite_Player.prototype.characterPatternY = function() {
     
+    //if(this._character._currentTarget) return this._character.getTargetDirection();
     if(this._character.isDiagonal()) return this._character.getDiagonalDirection();
     
     return dsc_Sprite_Player_characterPatternY.call(this);
@@ -237,8 +247,8 @@ Sprite_Player.prototype.getAnimationIndex = function(animationIndex) {
 Sprite_Player.prototype.updateCharacterFrame = function() {
     var pw = this.patternWidth();
     var ph = this.patternHeight();
-    var sx = (this.characterBlockX() + this.characterPatternX()) * pw;
     var i = this.getAnimationIndex(this.characterPatternY());
+    var sx = (this.characterBlockX() + this.characterPatternX()) * pw;
     var sy = (this.characterBlockY() + i) * ph;
 
     this.updateHalfBodySprites();
@@ -446,6 +456,12 @@ Game_Player.prototype.useSkill = function(skillId, fromEvent) {
     this.updateCommands(skillId);
     this.payItemCost(skillId);
     
+    /*for(var i = 0; i < $gameMap._events.length; i++) {
+        if($gameMap._events[i] && $gameMap._events[i]._battler && !$gameMap._events[i]._battler._noTarget) {
+            console.log($gameMap._events[i]._battler);    
+        }
+    }*/
+    
     return skill;
 };
 
@@ -473,6 +489,31 @@ Game_Player.prototype.updateCommands = function(id) {
             }
         break;
     }
+};
+
+//csantos: save enemies previously targeted so the aim cycle only runs once
+Game_Player.prototype.pushEnemyTarget = function(enemy) {
+    this._enemiesTargeted.push(enemy);
+};
+
+Game_Player.prototype.getEnemyTarget = function() {
+   return this._enemiesTargeted;
+};
+
+Game_Player.prototype.resetEnemyTarget = function() {
+    this._enemiesTargeted = [];
+};
+
+//csantos: new function to set aim from game_player 
+Game_Player.prototype.setCurrentTarget = function(target) {
+    if(this._currentTarget) this._currentTarget._battler._isTarget = false; 
+    this._currentTarget = target;
+    if(target) this._currentTarget._battler._isTarget = true; 
+    console.log(this._currentTarget);
+};
+
+Game_Player.prototype.getCurrentTarget = function() {
+    return this._currentTarget;
 };
 
 /*var dsc_Game_Battler_gainHp = Game_Battler.prototype.gainHp;    

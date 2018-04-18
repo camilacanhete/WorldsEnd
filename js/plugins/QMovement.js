@@ -2597,7 +2597,14 @@ function ColliderManager() {
     if (this.smartMove() === 1 || this.smartMove() > 2) {
       this.smartMoveSpeed(dir);
     }
-    this.setDirection(dir);
+    
+    //csantos: if there is a current target, face it instead of forward
+    if(this._currentTarget) {
+        this.setDirectionToTarget();
+    } else {
+        this.setDirection(dir);   
+    }
+      
     if (this.isMovementSucceeded()) {
       this._forwardRadian = this.directionToRadian(dir);
       this._diagonal = false;
@@ -2623,7 +2630,14 @@ function ColliderManager() {
     if (this.smartMove() === 1 || this.smartMove() > 2) {
       this.smartMoveSpeed([horz, vert]);
     }
-    this.setDirection(this.direction8(horz, vert));
+    
+    //csantos: if there is a current target, face it instead of forward
+    if(this._currentTarget) {
+        this.setDirectionToTarget();
+    } else {
+        this.setDirection(this.direction8(horz, vert));   
+    }
+      
     if (this.isMovementSucceeded()) {
       this._forwardRadian = this.directionToRadian(this.direction8(horz, vert));
       this._adjustFrameSpeed = false;
