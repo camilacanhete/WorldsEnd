@@ -3170,9 +3170,9 @@ function Skill_Sequencer() {
       QABSManager.removePicture(skill.pictureCollider);
         
       //csantos: remove children's picture too(spread function)
-      if(this._skill.skills) {
-        for(var k = 0; k < this._skill.skills.length; k++) {
-            QABSManager.removePicture(this._skill.skills[k].picture);
+      if(skill.skills) {
+        for(var k = 0; k < skill.skills.length; k++) {
+            QABSManager.removePicture(skill.skills[k].picture);
         }
       }
         
