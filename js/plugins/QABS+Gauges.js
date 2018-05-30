@@ -462,7 +462,7 @@ function Sprite_BossGauge() {
 
   Sprite_BossGauge.prototype.updatePosition = function() {
     this.x = Graphics.boxWidth / 2 + this._battler._bossHpBarOX;
-    this.y = this._battler._bossHpBarOY;
+    this.y = Graphics.boxHeight - this._battler._bossHpBarOY;
   };
 
   Sprite_BossGauge.prototype.showGauge = function() {

@@ -974,10 +974,11 @@ function QPathfind() {
     this._pathfind = new QPathfind(this.charaId(), new Point(x, y), options);
   };
 
-  Game_Character.prototype.initChase = function(charaId) {
+  Game_Character.prototype.initChase = function(charaId, canChase) { //csantos: creating  a new var called canChase
     if (this.charaId() === charaId) return;
     if (!QPlus.getCharacter(charaId)) return;
     if (this._isChasing === charaId) return;
+    if (canChase !== undefined && canChase === false) return;
     this.initPathfind(0, 0, {
       smart: 2,
       chase: charaId,

@@ -403,6 +403,7 @@ Imported.QABS = '1.6.3';
  * moveToStored [DURATION] [WAIT? TRUE or FALSE]
  * wave [FORWARD or BACKWARD] [AMPLITUDE] [HARM] [DIST] [DURATION] [WAIT? TRUE or FALSE]
  * waveToStored [AMPLITUDE] [HARM] [DURATION] [WAIT? TRUE or FALSE]
+ * spread [FORWARD or BACKWARD] [DIST] [DURATION] [WAIT? TRUE or FALSE]
  * trigger
  * adjustAim
  * wait [DURATION]
@@ -701,6 +702,7 @@ Imported.QABS = '1.6.3';
  * - TYPE: The AI type, set this to `none` to disable AI.
  *
  * **_Note_** There's only 1 type of AI, so for now that AI is only to disable AI
+ * //csantos: making some new types of AI: fixed will shoot but not move
  *
  * #### To set it's AI range
  * ~~~
@@ -1048,13 +1050,24 @@ function QABS() {
     var stored = 0;
     var maxDist = 0;
     actions.forEach(function(action) {
-      var move = /^(?:move|wave) (.*)/i.exec(action);
+      var move = /^(?:move|wave|spread) (.*)/i.exec(action); //csantos: adding spread to list of actions
       if (move) {
+        var type =  move[0].trim().split(' ')[0]; //adding type tocheck if this move is "spread"
         move = move[1].trim().split(' ');
-        if (move[0] === 'forward') {
-          currDist += Number(move[1]) || 0;
-        } else {
-          currDist -= Number(move[1]) || 0;
+        
+        if(type === 'spread') {
+            if (move[0] === 'forward') {
+              currDist += Number(move[2]) || 0;
+            } else {
+              currDist -= Number(move[2]) || 0;
+            }
+        } 
+        else{
+            if (move[0] === 'forward') {
+              currDist += Number(move[1]) || 0;
+            } else {
+              currDist -= Number(move[1]) || 0;
+            }
         }
         maxDist = Math.max(currDist, maxDist);
       }
@@ -1385,6 +1398,10 @@ function Skill_Sequencer() {
       }
       case 'wavetostored': {
         this.actionWaveToStored(action);
+        break;
+      }
+      case 'spread': { //csantos: adding spread to the list of actions
+        this.actionSpread(action);
         break;
       }
       case 'damage':
@@ -1771,7 +1788,10 @@ function Skill_Sequencer() {
     var dir = action[0];
     var distance = Number(action[1]);
     var duration = Number(action[2]);
-    ColliderManager.draw(this._skill.collider, duration);
+    //csantos: adding condition just in case of collier doesn't exist
+    if(this._skill.collider) {
+        ColliderManager.draw(this._skill.collider, duration);
+    }
     var radian = this._skill.radian;
     if (dir === 'backward') {
       radian -= Math.PI;
@@ -1795,6 +1815,84 @@ function Skill_Sequencer() {
       this._skill.radian += this._skill.radian < 0 ? Math.PI * 2 : 0;
       this.actionMove(['forward', dist, action[0], action[1]]);
     }
+  };
+  
+  //csantos: adding spread to the list of actions
+  Skill_Sequencer.prototype.actionSpread = function(action) {
+    //console.log(action);
+    var dir = 0;
+    var radian = 0;
+    var direction = Number(action[1]); 
+    var distance = Number(action[2]);
+    var duration = Number(action[3]);
+    var char = this._skill.sequencer._character; //.charaId()
+    
+    this._skill.skills = [];
+    for(var i = 0; i < direction; i++) {
+        dir = (direction == 4) ? (i+1)*2 : (i+1);
+        radian = this.directionToRadian(dir);
+        
+        //csantos: clone object so we can modify values without affecting the parent (pass by value not by reference)
+        this._skill.skills[i] = Object.create(this._skill);
+        
+        //csantos: meking a new collider
+        this._skill.skills[i].collider = char.makeSkillCollider(this._skill.settings);
+        
+        //csantos: create new picture
+        //this._skill.skills[i].picture = Object.create(this._skill.picture);
+        //QABSManager.addPicture( this._skill.skills[i].picture);
+        this.createSpreadPicture(this._skill.skills[i], radian);
+        
+        //this._skill.skills[i].picture.bitmap = ImageManager.loadPicture("fireball%[4-4]");
+        
+        //csantos: draw this collider with unique id
+        ColliderManager.draw(this._skill.skills[i].collider, duration);
+        
+        //csantos: calculate final position of this moving skill
+        this.actionMoveSpread(i, radian, distance, duration);    
+    }
+      
+    //csantos: remove this skill picture
+    //QABSManager.removePicture(this._skill.picture);
+      
+    //csanto: remove parent collider
+    this._skill.collider = null;
+      
+    //csantos: update skill
+    this._skill.moving = true;
+  };
+  
+  Skill_Sequencer.prototype.directionToRadian = function(dir) {
+    dir = dir || this._direction;
+    if (dir === 2) return Math.PI / 2;
+    if (dir === 4) return Math.PI;
+    if (dir === 6) return 0;
+    if (dir === 8) return Math.PI * 3 / 2;
+    if (dir === 1) return Math.PI * 3 / 4;
+    if (dir === 3) return Math.PI / 4;
+    if (dir === 5) return Math.PI * 5 / 4;
+    if (dir === 7) return Math.PI * 7 / 4;
+    return 0;
+  };
+  
+  Skill_Sequencer.prototype.createSpreadPicture = function(skill, radian) {
+    skill.picture = new Sprite_SkillPicture();
+    skill.picture.bitmap = ImageManager.loadPicture(this._skill.picture.filename);
+    skill.picture.rotatable = this._skill.picture.rotatable;
+    skill.picture.originDirection = radian;
+    skill.picture.z = 3;
+    skill.picture.anchor.x = 0.5;
+    skill.picture.anchor.y = 0.5;
+    if (this._skill.picture._isAnimated) {
+      skill.picture.setupAnim(this._skill.picture._maxFrames, this._skill.picture._speed);
+    }
+    this.setSkillPictureRadian(skill.picture, radian);
+    var x = skill.collider.center.x;
+    var y = skill.collider.center.y;
+    skill.picture.move(x, y);
+    skill.picture.bitmap.addLoadListener(function() {
+      QABSManager.addPicture(this);
+    }.bind(skill.picture));
   };
 
   Skill_Sequencer.prototype.actionWave = function(action) {
@@ -1878,12 +1976,16 @@ function Skill_Sequencer() {
 
   Skill_Sequencer.prototype.actionWait = function(action) {
     var duration = Number(action[0]);
-    ColliderManager.draw(this._skill.collider, duration);
+    //csantos: adding condition just in case of collier doesn't exist
+    if(this._skill.collider) {
+        ColliderManager.draw(this._skill.collider, duration);
+    }
     this._waitCount = duration;
   };
 
   Skill_Sequencer.prototype.actionPicture = function(action) {
     this._skill.picture = new Sprite_SkillPicture();
+    this._skill.picture.filename = action[0]; //csantos: saving for children
     this._skill.picture.bitmap = ImageManager.loadPicture(action[0]);
     this._skill.picture.rotatable = action[1] === 'true';
     this._skill.picture.originDirection = Number(action[2]);
@@ -1901,7 +2003,9 @@ function Skill_Sequencer() {
     var y = this._skill.collider.center.y;
     this._skill.picture.move(x, y);
     this._skill.picture.bitmap.addLoadListener(function() {
-      QABSManager.addPicture(this);
+        if(!action[3] || action[3] !== "spread") { //csanto: adding conditional
+            QABSManager.addPicture(this);
+        }
     }.bind(this._skill.picture));
   };
 
@@ -2020,6 +2124,18 @@ function Skill_Sequencer() {
     if (instant) {
       this.updateSkillPosition();
     }
+  };
+    
+  Skill_Sequencer.prototype.actionMoveSpread = function(pos, radian, distance, duration) {
+    if (duration <= 0) duration = 1;
+    this._skill.skills[pos].newX = this._skill.skills[pos].collider.x + Math.round(distance * Math.cos(radian));
+    this._skill.skills[pos].newY = this._skill.skills[pos].collider.y + Math.round(distance * Math.sin(radian));
+    this._skill.skills[pos].speed = Math.abs(distance / duration);
+    this._skill.skills[pos].speedX = Math.abs(this._skill.skills[pos].speed * Math.cos(radian));
+    this._skill.skills[pos].speedY = Math.abs(this._skill.skills[pos].speed * Math.sin(radian));
+    this._skill.skills[pos].picture.rotation = radian;
+      
+    //console.log("collider:" + pos + ", newX: " + this._skill.skills[pos].newX + ", newY: " + this._skill.skills[pos].newY + ", radian: " + radian + ", speed: " + this._skill.skills[pos].speed);
   };
 
   Skill_Sequencer.prototype.actionWaveSkill = function(amp, harmonics, distance, duration) {
@@ -2192,31 +2308,33 @@ function Skill_Sequencer() {
     var originRadian = this._character.directionToRadian(originDirection);
     picture.rotation = originRadian + radian;
   };
-
-  Skill_Sequencer.prototype.canSkillMove = function() {
+    
+  //csantos: change to accept skill also as parameter (used on spread function)
+  Skill_Sequencer.prototype.canSkillMove = function(s) {
     var collided = false;
-    var through = this._skill.settings.through;
-    var targets = QABSManager.getTargets(this._skill, this._character);
+    var skill = s || this._skill;
+    var through = skill.settings.through;
+    var targets = QABSManager.getTargets(skill, this._character);
     if (targets.length > 0) {
       for (var i = targets.length - 1; i >= 0; i--) {
-        if (!this._skill.targetsHit.contains(targets[i].charaId())) {
-          this._skill.targetsHit.push(targets[i].charaId());
+        if (!skill.targetsHit.contains(targets[i].charaId())) {
+          skill.targetsHit.push(targets[i].charaId());
         } else {
           targets.splice(i, 1);
         }
       }
       if (targets.length > 0) {
-        this._skill.targets = targets;
+        skill.targets = targets;
         if (through === 1 || through === 3) {
           collided = true;
           // TODO select the nearest target
-          this._skill.targets = [targets[0]];
+          skill.targets = [targets[0]];
         }
-        this.updateSkillDamage();
+        this.updateSkillDamage(skill);
       }
     }
     if (collided) return false;
-    var edge = this._skill.collider.gridEdge();
+    var edge = skill.collider.gridEdge();
     var maxW = $gameMap.width();
     var maxH = $gameMap.height();
     if (!$gameMap.isLoopHorizontal()) {
@@ -2226,7 +2344,7 @@ function Skill_Sequencer() {
       if (edge.y2 < 0 || edge.y1 >= maxH) return false;
     }
     if (through === 2 || through === 3) {
-      ColliderManager.getCollidersNear(this._skill.collider, function(collider) {
+      ColliderManager.getCollidersNear(skill.collider, function(collider) {
         if (collider === this.collider) return false;
         if (this.settings.throughTerrain.contains(collider.terrain)) {
           return false;
@@ -2235,13 +2353,13 @@ function Skill_Sequencer() {
           collided = true;
           return 'break';
         }
-      }.bind(this._skill));
+      }.bind(skill));
     }
     if (through === 1 || through === 3) {
-      ColliderManager.getCharactersNear(this._skill.collider, function(chara) {
+      ColliderManager.getCharactersNear(skill.collider, function(chara) {
         if (chara === this._character || chara.isThrough() || !chara.isNormalPriority()) return false;
         if (chara.isLoot || chara._erased || chara.isDead) return false;
-        if (this._skill.collider.intersects(chara.collider('collision'))) {
+        if (skill.collider.intersects(chara.collider('collision'))) {
           collided = true;
           return 'break';
         }
@@ -2262,30 +2380,48 @@ function Skill_Sequencer() {
       this._character._skillLocked.splice(i, 1);
     }
     this._character._casting = false;
+    //this._character._canChase = true;
     this.onEnd();
   };
 
   Skill_Sequencer.prototype.onEnd = function() {
-    this._skill.collider.kill = true;
+    if(this._skill.collider) this._skill.collider.kill = true;
     QABSManager.removePicture(this._skill.picture);
     QABSManager.removePicture(this._skill.trail);
     QABSManager.removePicture(this._skill.pictureCollider);
+      
+    //csantos: remove children's picture too(spread function)
+    if(this._skill.skills) {
+        for(var k = 0; k < this._skill.skills.length; k++) {
+            QABSManager.removePicture(this._skill.skills[k].picture);
+        }
+    }
+      
     var i = this._character._activeSkills.indexOf(this._skill);
-    this._character._activeSkills.splice(i, 1);
+    this._character._activeSkills.splice(i, 1);  
   };
 
   Skill_Sequencer.prototype.update = function() {
     if (this._skill.break || this._character.battler().isStunned()) {
-      return this.onBreak();
+        //this._character._canChase = true;
+        //if(this._character._aiType == 'boss') console.log("break skill: " + this._character._canChase);
+        return this.onBreak();
     }
     if (this._skill.moving) {
-      this.updateSkillPosition();
+        //this._character._canChase = false;
+        //if(this._character._aiType == 'boss') console.log("skill is moving: " + this._character._canChase);
+        this.updateSkillPosition();
     }
     if (!this.isWaiting()) {
-      this.updateSequence();
-    } else {
-      this.updateWait();
+        //this._character._canChase = false;
+        //if(this._character._aiType == 'boss') console.log("not waiting: " + this._character._canChase);
+        this.updateSequence();
+    } else { 
+        //this._character._canChase = true;
+        //if(this._character._aiType == 'boss') console.log("waiting: " + this._character._canChase);
+        this.updateWait();
     }
+    
   };
 
   Skill_Sequencer.prototype.updateWait = function() {
@@ -2316,26 +2452,31 @@ function Skill_Sequencer() {
       return this.onEnd();
     }
   };
-
-  Skill_Sequencer.prototype.updateSkillDamage = function() {
-    var targets = this._skill.targets;
+    
+  //csantos: change to accept skill also as parameter (used on spread function)
+  Skill_Sequencer.prototype.updateSkillDamage = function(s) {
+    var skill = s || this._skill;
+    var targets = skill.targets;
       
     //csantos: adding verification to continue damage action only if target is not dodging
     for(var j = 0; j < targets.length; j++) {
         if(targets[j].isRolling() === false) {
-            for (var i = 0; i < this._skill.ondmg.length; i++) {
-              var action = this._skill.ondmg[i].split(' ');
+            for (var i = 0; i < skill.ondmg.length; i++) {
+              var action = skill.ondmg[i].split(' ');
               this.startOnDamageAction(action, targets);
             }
         }
     }
       
-    QABSManager.startAction(this._character, targets, this._skill);
+    QABSManager.startAction(this._character, targets, skill);
   };
 
   Skill_Sequencer.prototype.updateSkillPosition = function() {
     if (this._skill.waving) {
       return this.updateSkillWavePosition();
+    }
+    if (this._skill.skills) {
+      return this.updateSpreadPosition();
     }
     var collider = this._skill.collider;
     var x1 = collider.x;
@@ -2368,6 +2509,56 @@ function Skill_Sequencer() {
       this._skill.trail.move(x4, y4, dist, h);
     }
     if (!this.canSkillMove() || (x1 === x2 && y1 === y2)) {
+      this._skill.targetsHit = [];
+      this._skill.moving = false;
+      this._waitForMove = false;
+    }
+  };
+    
+  Skill_Sequencer.prototype.updateSpreadPosition = function() {
+    var stopMoving = 0;
+    for(var i = 0; i < this._skill.skills.length; i++) {
+        var currentSkill = this._skill.skills[i];
+        var collider = currentSkill.collider;
+        var x1 = collider.x;
+        var x2 = currentSkill.newX;
+        var y1 = collider.y;
+        var y2 = currentSkill.newY;
+        if (x1 < x2) x1 = Math.min(x1 + currentSkill.speedX, x2);
+        if (x1 > x2) x1 = Math.max(x1 - currentSkill.speedX, x2);
+        if (y1 < y2) y1 = Math.min(y1 + currentSkill.speedY, y2);
+        if (y1 > y2) y1 = Math.max(y1 - currentSkill.speedY, y2);
+        currentSkill.collider.moveTo(x1, y1);
+        //console.log("collider:" + collider.id + ", x1: " + x1 + ", x2: " + x2 + ", y1: " + y1 + ", y2: " + y2);
+        var x3 = collider.center.x;
+        var y3 = collider.center.y;
+        if (currentSkill.picture) {
+          currentSkill.picture.move(x3, y3);
+          //console.log(currentSkill.picture);
+        }
+        /*if (this._skill.trail) {
+          var x4 = currentSkill.trail.startX;
+          var y4 = currentSkill.trail.startY;
+          var x5 = x4 - x3;
+          var y5 = y4 - y3;
+          var dist = Math.sqrt(x5 * x5 + y5 * y5);
+          var radian = currentSkill.trail.rotation;
+          var w = currentSkill.trail.bitmap.width;
+          var h = currentSkill.trail.bitmap.height;
+          var ox = w * Math.sin(radian);
+          var oy = (h / 2) * -Math.cos(radian);
+          x4 += dist * -Math.cos(radian) + ox;
+          y4 += dist * -Math.sin(radian) + oy;
+          currentSkill.trail.move(x4, y4, dist, h);
+        }*/
+        
+        if (!this.canSkillMove(currentSkill) || (x1 === x2 && y1 === y2)) {
+          stopMoving++;
+        }
+    }
+      
+    if(stopMoving >= this._skill.skills.length) {
+        //console.log(stopMoving);
       this._skill.targetsHit = [];
       this._skill.moving = false;
       this._waitForMove = false;
@@ -2802,6 +2993,7 @@ function Skill_Sequencer() {
       }
       if ($dataStates[stateId].meta.stun) {
         this._isStunned--;
+        console.log(this._isStunned--);
       }
     }
     Alias_Game_Battler_removeState.call(this, stateId);
@@ -2930,6 +3122,9 @@ function Skill_Sequencer() {
     this._dontErase = !!meta.dontErase;
     this._team = Number(meta.team || 2);
     this._noTarget = !!meta.noTarget;
+      
+    //csantos: adding a new parameter tokow if character is currently executing action
+    this.executingAction = false;
   };
 
   Game_Enemy.prototype.clearStates = function() {
@@ -2973,6 +3168,14 @@ function Skill_Sequencer() {
       QABSManager.removePicture(skill.picture);
       QABSManager.removePicture(skill.trail);
       QABSManager.removePicture(skill.pictureCollider);
+        
+      //csantos: remove children's picture too(spread function)
+      if(this._skill.skills) {
+        for(var k = 0; k < this._skill.skills.length; k++) {
+            QABSManager.removePicture(this._skill.skills[k].picture);
+        }
+      }
+        
       this._activeSkills.splice(i, 1);
     }
   };
@@ -3592,6 +3795,7 @@ function Skill_Sequencer() {
       this._dontErase = this._battler._dontErase;
       this._team = this._battler._team;
       this._isDead = false;
+      this._canChase = true; //csantos - custom
     }
   };
 
@@ -3665,31 +3869,45 @@ function Skill_Sequencer() {
 
   Game_Event.prototype.validAI = function() {
     // if added new AI types, expand here with its name so the
-    // updateAI will run
-    return this._aiType === "simple";
+    // updateAI will run.
+    //csantos: update other types of AI (like fixed)
+    return this._aiType === "simple" || this._aiType === "fixed" || this._aiType === "boss";
   };
 
   Game_Event.prototype.updateAI = function(type) {
     if (type === 'simple') {
-      return this.updateAISimple();
+      return this.updateAISimple(true);
+    } else if (type === 'fixed') {
+      return this.updateAISimple(false);
+    }
+    else if (type === 'boss') {
+      return this.updateAIBoss(false);
     }
     // to add more AI types, alias this function
     // and do something similar to above
   };
 
-  Game_Event.prototype.updateAISimple = function() {
+  Game_Event.prototype.updateAISimple = function(moveTowardCharacter) { //csantos: adding moveTowardCharacter
     var bestTarget = this.bestTarget();
     if (!bestTarget) return;
     var targetId = bestTarget.charaId();
-    if (!this.AISimpleInRange(bestTarget)) return;
-    this.AISimpleAction(bestTarget, this.AISimpleGetAction(bestTarget));
+    if (!this.AISimpleInRange(bestTarget, moveTowardCharacter)) return;
+    this.AISimpleAction(bestTarget, this.AISimpleGetAction(bestTarget), moveTowardCharacter);
+  };
+    
+ Game_Event.prototype.updateAIBoss = function(moveTowardCharacter) { //csantos: adding moveTowardCharacter
+    var bestTarget = this.bestTarget();
+    if (!bestTarget) return;
+    var targetId = bestTarget.charaId();
+    if (!this.AISimpleInRange(bestTarget, false)) return;
+    this.AISimpleAction(bestTarget, this.AIBossGetAction(bestTarget), true);
   };
 
-  Game_Event.prototype.AISimpleInRange = function(bestTarget) {
+  Game_Event.prototype.AISimpleInRange = function(bestTarget, moveTowardCharacter) { //csantos: adding moveTowardCharacter
     var targetId = bestTarget.charaId();
     if (this.isTargetInRange(bestTarget)) {
       if (!this._agroList.hasOwnProperty(targetId)) {
-        this._aiWait = QABS.aiWait;
+        this._aiWait = 0; //QABS.aiWait
         this.addAgro(targetId);
         if (this._aiPathfind) {
           this.clearPathfind();
@@ -3711,14 +3929,14 @@ function Skill_Sequencer() {
           this.endCombat();
         }.bind(this));
       }
-      if (this._endWait && this.canMove()) {
+      if (moveTowardCharacter && this._endWait && this.canMove()) {
         this.moveTowardCharacter(bestTarget);
       }
       return false;
     }
     return false;
   };
-
+    
   Game_Event.prototype.AISimpleGetAction = function(bestTarget) {
     var bestAction = null;
     if (this._aiWait >= QABS.aiWait) {
@@ -3731,12 +3949,36 @@ function Skill_Sequencer() {
     return bestAction;
   };
 
-  Game_Event.prototype.AISimpleAction = function(bestTarget, bestAction) {
-    if (bestAction) {
+  Game_Event.prototype.AIBossGetAction = function(bestTarget) {
+    var bestAction = null;
+    this._canChase = false;
+    if (this._aiWait >= 100 && this._aiWait <= 200) {
+        bestAction = -1;
+        this._aiWait++;
+    } else if(this._aiWait >= 200) {
+        this.turnTowardCharacter(bestTarget);
+        bestAction = QABSManager.bestAction(this.charaId());
+        this._aiWait = 0;
+    } else {
+        this._aiWait++;
+        this._canChase = true;
+    }
+      
+    return bestAction;
+  };
 
+  Game_Event.prototype.AISimpleAction = function(bestTarget, bestAction, moveTowardCharacter) { //csantos: adding moveTowardCharacter
+      if (bestAction) {   
+      if(bestAction === -1) {
+          return;
+      }
       var skill = this.useSkill(bestAction);
-      if (skill) skill._target = bestTarget;
-    } else if (this.canMove()) {
+      if (skill) { 
+          this.clearPathfind(); //clear chase
+          skill._target = bestTarget;
+          //if(this._aiType === "boss") { this._battler._isStunned = 900; }
+      } 
+    } else if (moveTowardCharacter && this.canMove()) {
       if (this._aiPathfind) {
         var dx = bestTarget.cx() - this.cx();
         var dy = bestTarget.cy() - this.cy();
@@ -3746,7 +3988,7 @@ function Skill_Sequencer() {
           this.clearPathfind();
           this.moveTowardCharacter(bestTarget);
         } else {
-          this.initChase(bestTarget.charaId());
+          this.initChase(bestTarget.charaId(), this._canChase);
         }
       } else {
         this.moveTowardCharacter(bestTarget);
@@ -4315,6 +4557,7 @@ function Sprite_SkillPicture() {
     this.x -= $gameMap.displayX() * QMovement.tileSize;
     this.y = this._realY;
     this.y -= $gameMap.displayY() * QMovement.tileSize;
+    //console.log("updating picture x: " + this.x + ", y: " + this.y);
   };
 
   Sprite_SkillPicture.prototype.updateAnimation = function() {
