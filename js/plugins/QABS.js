@@ -1820,37 +1820,38 @@ function Skill_Sequencer() {
   //csantos: adding spread to the list of actions
   Skill_Sequencer.prototype.actionSpread = function(action) {
     //console.log(action);
+    var self = this;
     var dir = 0;
     var radian = 0;
     var direction = Number(action[1]); 
     var distance = Number(action[2]);
     var duration = Number(action[3]);
-    var char = this._skill.sequencer._character; //.charaId()
-    
-    this._skill.skills = [];
-    for(var i = 0; i < direction; i++) {
-        dir = (direction == 4) ? (i+1)*2 : (i+1);
-        radian = this.directionToRadian(dir);
+    var algorithm = action[4];
+    var time = Number(action[5]);
+    var interval = 0;
+      
+    switch(algorithm) {
+        case "EVEN":
+            interval = 2 * Math.PI / direction;
+        break;
+        case "GOLDEN_RATIO":
+            interval = 2 * Math.PI * 1.618033989;
+        break;
+    }  
+      
+    this._skill.skills = new Array(direction);
+    //for(var j = 0; j < 3; j++) {
+        for(var i = 0; i < direction; i++) {
+            //dir = (direction == 4) ? (i+1)*2 : (i+1);
+            //radian = this.directionToRadian(dir);
+            this.createSpreadSkill(i, time, interval, radian, distance, duration);
+        }
         
-        //csantos: clone object so we can modify values without affecting the parent (pass by value not by reference)
-        this._skill.skills[i] = Object.create(this._skill);
-        
-        //csantos: meking a new collider
-        this._skill.skills[i].collider = char.makeSkillCollider(this._skill.settings);
-        
-        //csantos: create new picture
-        //this._skill.skills[i].picture = Object.create(this._skill.picture);
-        //QABSManager.addPicture( this._skill.skills[i].picture);
-        this.createSpreadPicture(this._skill.skills[i], radian);
-        
-        //this._skill.skills[i].picture.bitmap = ImageManager.loadPicture("fireball%[4-4]");
-        
-        //csantos: draw this collider with unique id
-        ColliderManager.draw(this._skill.skills[i].collider, duration);
-        
-        //csantos: calculate final position of this moving skill
-        this.actionMoveSpread(i, radian, distance, duration);    
-    }
+        //QABSManager.randomness += 15;
+        //if(QABSManager.randomness > 360) { QABSManager.randomness = 0; }
+
+        //console.log(QABSManager.randomness);
+    //}
       
     //csantos: remove this skill picture
     //QABSManager.removePicture(this._skill.picture);
@@ -1860,6 +1861,45 @@ function Skill_Sequencer() {
       
     //csantos: update skill
     this._skill.moving = true;
+     
+    /*if(QABSManager.bulletTimes <= 3) {
+        QABSManager.bulletTimes++;
+        this.actionSpread(action);  
+    } else {
+        QABSManager.bulletTimes = 0;
+    }*/
+      
+  };
+    
+  Skill_Sequencer.prototype.createSpreadSkill = function(i, time, interval, radian, distance, duration) {
+        var self = this;
+        var char = this._skill.sequencer._character; //.charaId()
+      
+        setTimeout(function() {
+            //console.log(i);
+            
+            var radian = i * interval;
+            
+            //csantos: clone object so we can modify values without affecting the parent (pass by value not by reference)
+            self._skill.skills[i] = Object.create(self._skill);
+
+            //csantos: making a new collider
+            self._skill.skills[i].collider = char.makeSkillCollider(self._skill.settings);
+
+            //csantos: create new picture
+            //this._skill.skills[i].picture = Object.create(this._skill.picture);
+            //QABSManager.addPicture( this._skill.skills[i].picture);
+            self.createSpreadPicture(self._skill.skills[i], radian);
+
+            //this._skill.skills[i].picture.bitmap = ImageManager.loadPicture("fireball%[4-4]");
+
+            //csantos: draw this collider with unique id
+            ColliderManager.draw(self._skill.skills[i].collider, duration);
+
+            //csantos: calculate final position of this moving skill
+            self.actionMoveSpread(i, radian, distance, duration); 
+            
+        }, time * i);
   };
   
   Skill_Sequencer.prototype.directionToRadian = function(dir) {
@@ -2135,7 +2175,7 @@ function Skill_Sequencer() {
     this._skill.skills[pos].speedY = Math.abs(this._skill.skills[pos].speed * Math.sin(radian));
     this._skill.skills[pos].picture.rotation = radian;
       
-    //console.log("collider:" + pos + ", newX: " + this._skill.skills[pos].newX + ", newY: " + this._skill.skills[pos].newY + ", radian: " + radian + ", speed: " + this._skill.skills[pos].speed);
+    console.log("collider:" + pos + ", newX: " + this._skill.skills[pos].newX + ", newY: " + this._skill.skills[pos].newY + ", radian: " + radian + ", speed: " + this._skill.skills[pos].speed);
   };
 
   Skill_Sequencer.prototype.actionWaveSkill = function(amp, harmonics, distance, duration) {
@@ -2518,24 +2558,39 @@ function Skill_Sequencer() {
   Skill_Sequencer.prototype.updateSpreadPosition = function() {
     var stopMoving = 0;
     for(var i = 0; i < this._skill.skills.length; i++) {
+        
+        if(!this._skill.skills[i] || !this._skill.skills[i].collider) break;
+        
         var currentSkill = this._skill.skills[i];
         var collider = currentSkill.collider;
         var x1 = collider.x;
         var x2 = currentSkill.newX;
         var y1 = collider.y;
         var y2 = currentSkill.newY;
+        
         if (x1 < x2) x1 = Math.min(x1 + currentSkill.speedX, x2);
         if (x1 > x2) x1 = Math.max(x1 - currentSkill.speedX, x2);
         if (y1 < y2) y1 = Math.min(y1 + currentSkill.speedY, y2);
         if (y1 > y2) y1 = Math.max(y1 - currentSkill.speedY, y2);
-        currentSkill.collider.moveTo(x1, y1);
+        
+        
+        
+        //console.log("skill: " + i + ", x1: " + x1 + ", y1: " + y1);
         //console.log("collider:" + collider.id + ", x1: " + x1 + ", x2: " + x2 + ", y1: " + y1 + ", y2: " + y2);
+        
+        //csantos: apply force
+        //x1 = x1 - angle;
+        //y1 = y1 + angle;
+        
+        currentSkill.collider.moveTo(x1, y1);
+        
         var x3 = collider.center.x;
         var y3 = collider.center.y;
         if (currentSkill.picture) {
           currentSkill.picture.move(x3, y3);
           //console.log(currentSkill.picture);
         }
+        
         /*if (this._skill.trail) {
           var x4 = currentSkill.trail.startX;
           var y4 = currentSkill.trail.startY;
@@ -2556,7 +2611,8 @@ function Skill_Sequencer() {
           stopMoving++;
         }
     }
-      
+     
+    //TODO:  modify this logic because id doesn't seem to be working for settimeout functions
     if(stopMoving >= this._skill.skills.length) {
         //console.log(stopMoving);
       this._skill.targetsHit = [];
